@@ -335,12 +335,17 @@
     document.querySelectorAll("[data-de]").forEach(el => { el.textContent = EN() ? el.dataset.en : el.dataset.de; });
     document.querySelectorAll("[data-html-de]").forEach(el => { el.innerHTML = EN() ? el.dataset.htmlEn : el.dataset.htmlDe; });
     const lt = document.getElementById("langToggle");
-    lt.textContent = EN() ? "Deutsch" : "English";
-    lt.setAttribute("lang", EN() ? "de" : "en");
-    lt.setAttribute("aria-label", EN() ? "Auf Deutsch umschalten" : "Switch to English");
-    document.getElementById("themeToggle").textContent = L("Hell/Dunkel", "Light/Dark");
-    document.getElementById("themeToggle").setAttribute("aria-label", L("Farbschema wechseln", "Toggle colour scheme"));
-    document.querySelector('meta[name="description"]').setAttribute("content", L(
+    if (lt) {
+      lt.textContent = EN() ? "Deutsch" : "English";
+      lt.setAttribute("lang", EN() ? "de" : "en");
+      lt.setAttribute("aria-label", EN() ? "Auf Deutsch umschalten" : "Switch to English");
+    }
+    const tt = document.getElementById("themeToggle");
+    if (tt) {
+      tt.textContent = L("Hell/Dunkel", "Light/Dark");
+      tt.setAttribute("aria-label", L("Farbschema wechseln", "Toggle colour scheme"));
+    }
+    document.querySelector('meta[name="description"]')?.setAttribute("content", L(
       "Welche Zinslast wurde in einem Jahr für die Zukunft eingegangen? Finanzierungskosten staatlicher Kreditjahrgänge bis zur Fälligkeit, berechnet aus einzelnen Emissionen.",
       "What interest burden was committed for the future in a given year? Financing costs of government borrowing vintages until maturity, calculated from individual issues."));
   }
@@ -1282,7 +1287,7 @@
     try { localStorage.setItem("theme", next); } catch (e) { /* Speicher gesperrt */ }
     route();
   });
-  document.getElementById("langToggle").addEventListener("click", () => {
+  document.getElementById("langToggle")?.addEventListener("click", () => {
     LANG = EN() ? "de" : "en";
     try { localStorage.setItem("lang", LANG); } catch (e) { /* Speicher gesperrt */ }
     setLocale();
