@@ -61,5 +61,47 @@
     "retrieved": "2026-09-30T18:10:31+00:00",
     "bytes": 50657,
     "sha256": "e729e0d9e0b7c801de693788d17dbc904fdf00f93eb38466c961be2137bdbab3"
+  },
+  "bbk_gross": {
+    "file": "de/bundesbank_gross.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/M.I.ABS.FV._T.S1311.A.A.A.A.A.A._Z._Z.A?format=csv",
+    "retrieved": "2026-09-30T20:00:12+00:00",
+    "bytes": 13493,
+    "sha256": "58425ea9702c1b8017bba57bc53c3aa7d9cad545f7051a70f2f7d672620ec5f5"
+  },
+  "bbk_gross_le4": {
+    "file": "de/bundesbank_gross_le4.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/M.I.ABS.FV._T.S1311.A.A.VB004.A.A.A._Z._Z.A?format=csv",
+    "retrieved": "2026-09-30T20:00:12+00:00",
+    "bytes": 15495,
+    "sha256": "5ca59ec689e2332578fd0f9cafd97523d20506daa399ead56e92ff170ea82b85"
+  },
+  "bbk_gross_gt4": {
+    "file": "de/bundesbank_gross_gt4.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/M.I.ABS.FV._T.S1311.A.A.VG004.A.A.A._Z._Z.A?format=csv",
+    "retrieved": "2026-09-30T20:00:13+00:00",
+    "bytes": 12403,
+    "sha256": "43ac52f6a4248208d60872a99255d33319fc0193a769eca288264391ba0aeceb"
+  },
+  "bbk_em_yield": {
+    "file": "de/bundesbank_em_yield.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/M.I.EMR.RD.EUR.S1311.A.A604.A.R.A.A._Z._Z.A?format=csv",
+    "retrieved": "2026-09-30T20:00:14+00:00",
+    "bytes": 13874,
+    "sha256": "7e85d06de0bf1ac6d5e8583a61e1c6193a0525129cd2232ece9d6b83cc26e01c"
+  },
+  "bbk_outstanding": {
+    "file": "de/bundesbank_outstanding.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/M.I.UML.FV._T.S1311.A.A.A.A.A.A._Z._Z.A?format=csv",
+    "retrieved": "2026-09-30T20:00:14+00:00",
+    "bytes": 14838,
+    "sha256": "3e545a74bfa68948801c10519f9335f36e5e946ef9d356788c7f4f29c8e6e228"
+  },
+  "bbk_umlaufrendite": {
+    "file": "de/bundesbank_umlaufrendite.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/M.I.UMR.RD.EUR.S1311.B.A604.A.R.A.A._Z._Z.A?format=csv",
+    "retrieved": "2026-09-30T20:01:03+00:00",
+    "bytes": 11983,
+    "sha256": "00ab86db4d5a3e8ea01ddbd0f7234b2c2243795ece83369e58d9cde68493a1b2"
   }
 }

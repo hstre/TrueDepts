@@ -19,7 +19,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from . import bonds
+from . import bbk_import, bonds
 from .de_import import (INSTRUMENT_LABEL, METHOD_LABEL, load_auctions, load_debt_report,
                         load_index_ratios, load_securities)
 from .sources import CANDIDATES, SOURCES
@@ -214,6 +214,7 @@ def main():
     report = load_debt_report()
     intl = load_intl()
     govs, fms, gov_note = governments()
+    agg, agg_gov = bbk_import.annual_aggregates(govs)
     last_auction = max(a["date"] for a in auctions)
     ilb_last = max(max(v) for v in ratio_tables.values())
 
@@ -286,11 +287,18 @@ def main():
         rep = report.get(year)
         wb_int = intl["DE"]["wb_interest"].get(str(year))
         imf = intl["DE"]["imf_debt"].get(str(year))
-        v = build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last)
+        v = build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last,
+                          agg.get(year), {g: vals for (yy, g), vals in agg_gov.items() if yy == year})
         dump(SITE / "de" / "years" / f"{year}.json", v)
-        summary.append({k: v[k] for k in ("year", "status", "totals", "paid", "split", "coverage", "context")} |
+        summary.append({k: v[k] for k in ("year", "status", "totals", "paid", "split", "coverage", "context", "aggregate")} |
                        {"govs": [g["id"] for g in v["governments"]]})
         for g in v["governments"]:
+            if g.get("model"):
+                t = gov_totals[g["id"]]
+                for k, val in zip(("model_low", "model_mid", "model_high"), g["model"]):
+                    t[k] += val
+                t["model_first"] = min(t.get("model_first", year), year)
+                t["model_last"] = max(t.get("model_last", year), year)
             if not g["n"]:
                 continue
             t = gov_totals[g["id"]]
@@ -299,15 +307,26 @@ def main():
             t["first"] = min(t.get("first", year), year)
             t["last"] = max(t.get("last", year), year)
 
+    backtest = []
+    for e in summary:
+        m = (e.get("aggregate") or {}).get("model") or {}
+        if m.get("role") == "backtest" and "exact_cost" in m:
+            backtest.append({"year": e["year"], "exact": m["exact_cost"], "low": m["low"], "mid": m["mid"], "high": m["high"],
+                             "in_band": m["exact_in_band"]})
+    normal = [b for b in backtest if b["year"] <= 2014]
     dump(SITE / "de" / "summary.json", {
+        "model_backtest": {"rows": backtest, "normal_years": [normal[0]["year"], normal[-1]["year"]] if normal else None,
+                           "normal_n": len(normal), "normal_in_band": sum(b["in_band"] for b in normal)},
         "country": "DE", "first_year": FIRST_YEAR, "last_year": today.year, "years": summary,
         "last_auction": iso(last_auction), "ilb_last_official": iso(ilb_last),
         "scenarios": bonds.SCENARIOS, "scope": context["scope"],
+        "model_terms": {"short": bbk_import.TERM_SHORT, "long": bbk_import.TERM_LONG},
     })
     gov_out = []
     for gv in govs:
         t = gov_totals.get(gv["id"])
-        gov_out.append(gv | ({k: (r1(v) if k not in ("first", "last", "n") else int(v)) for k, v in t.items()} if t else {}))
+        gov_out.append(gv | ({k: (r1(v) if k not in ("first", "last", "n", "model_first", "model_last") else int(v))
+                              for k, v in t.items()} if t else {}))
     dump(SITE / "de" / "governments.json", {"last_year": today.year, "note": gov_note, "governments": gov_out, "finance_ministers": fms})
 
     # --- Länder, Quellen, internationale Reihen ---
@@ -332,7 +351,7 @@ def main():
     print(f"{len(auctions)} Emissionen, Jahre {FIRST_YEAR}–{today.year} geschrieben nach {SITE.relative_to(ROOT)}")
 
 
-def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last):
+def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last, agg=None, agg_gov=None):
     priced = [i for i in items if "cost" in i]
     has_issue_data = bool(items)
     totals = None
@@ -399,6 +418,17 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
             split["allotted_net"] = r1(totals["allotted"] * share_net)
             split["allotted_refinancing"] = r1(totals["allotted"] * (1 - share_net))
 
+    elif agg and agg.get("net_from_outstanding") is not None and agg.get("gross"):
+        gross, net = agg["gross"], agg["net_from_outstanding"]
+        refi = max(0.0, min(gross, gross - net))
+        split = {
+            "status": MODEL, "source": "bundesbank", "gross": r1(gross), "net": r1(net), "refinancing": r1(refi),
+            "redemptions": r1(gross - net), "share_net": round(max(net, 0) / gross, 4) if gross else None,
+            "as_of": f"{year}-12-31", "complete_year": True, "scope": "nur Anleihen des Bundes (Bundesbank-Kapitalmarktstatistik)",
+        }
+        if agg.get("model") and year < 1999 and split["share_net"] is not None:
+            split["cost_net_model"] = [r1(agg["model"][k] * split["share_net"]) for k in ("model_low", "model_mid", "model_high")]
+
     coverage = None
     if totals and rep and rep.get("gross_borrowing") and rep.get("complete_year"):
         coverage = round(totals["allotted"] / rep["gross_borrowing"], 4)
@@ -412,6 +442,21 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
     if wb_int is not None:
         paid["wb"] = wb_int
 
+    aggregate = None
+    if agg:
+        aggregate = {"status": OFFICIAL, "gross": agg["gross"], "gross_dm": r1(agg["gross"] * bbk_import.DM_PER_EUR) if year < 1999 else None,
+                     "gross_le4": agg["gross_le4"], "gross_gt4": agg["gross_gt4"], "em_yield": agg["em_yield"],
+                     "outstanding": agg["outstanding"]}
+        if agg.get("model"):
+            m = agg["model"]
+            aggregate["model"] = {"status": MODEL, "low": m["model_low"], "mid": m["model_mid"], "high": m["model_high"],
+                                  "volume_without_yield": m["volume_without_yield"],
+                                  "volume_fallback_yield": m["volume_fallback_yield"],
+                                  "role": "estimate" if year < 1999 else "backtest"}
+            if totals and year < today.year:
+                aggregate["model"]["exact_cost"] = totals["cost"]
+                aggregate["model"]["exact_in_band"] = m["model_low"] <= totals["cost"] <= m["model_high"]
+
     # Regierungen im Jahr
     gov_list = []
     for gv in govs:
@@ -424,6 +469,8 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
             if sub:
                 for k in ("allotted", "proceeds", "cost", "cost_low", "cost_high", "cost_fixed"):
                     e[k] = r1(sum(i[k] for i in sub))
+            if year < 1999 and agg_gov and gv["id"] in agg_gov:
+                e["model"] = agg_gov[gv["id"]]
             gov_list.append(e)
 
     return {
@@ -432,7 +479,7 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
         "by_instrument": {k: {kk: r1(vv) if kk != "n" else int(vv) for kk, vv in v.items()} for k, v in by_instrument.items()},
         "flows": {y: [r1(x) for x in v] for y, v in sorted(flows.items())},
         "maturities": {y: r1(v) for y, v in sorted(maturities.items())},
-        "split": split, "coverage": coverage, "paid": paid, "imf_debt": imf,
+        "split": split, "coverage": coverage, "paid": paid, "imf_debt": imf, "aggregate": aggregate,
         "governments": gov_list, "issues": items,
         "data_through": iso(last_auction) if year == today.year else None,
         "ilb_last_official": iso(ilb_last),

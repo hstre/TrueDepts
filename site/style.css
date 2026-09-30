@@ -219,3 +219,4 @@ footer.site { border-top: 1px solid var(--border); color: var(--text-2); font-si
 @media (forced-colors: active) {
   .chip { border: 1px solid CanvasText; }
 }
+.source-list, .doc p { overflow-wrap: anywhere; }

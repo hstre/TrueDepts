@@ -150,6 +150,9 @@
         s("pattern", { id: "hatch-proj", patternUnits: "userSpaceOnUse", width: 5, height: 5, patternTransform: "rotate(45)" },
           s("rect", { width: 5, height: 5, fill: "var(--series-2)", "fill-opacity": 0.35 }),
           s("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--series-2)", "stroke-width": 2.5 })),
+        s("pattern", { id: "hatch-model", patternUnits: "userSpaceOnUse", width: 5, height: 5, patternTransform: "rotate(135)" },
+          s("rect", { width: 5, height: 5, fill: "var(--series-1)", "fill-opacity": 0.18 }),
+          s("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--series-1)", "stroke-width": 1.6 })),
         s("pattern", { id: "hatch-gap", patternUnits: "userSpaceOnUse", width: 6, height: 6, patternTransform: "rotate(135)" },
           s("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: "var(--gap-hatch)", "stroke-width": 1.5 })));
       svg.append(defs);
@@ -161,7 +164,7 @@
             let j = i; while (j + 1 < n && opts.gaps[j + 1]) j++;
             svg.append(s("rect", { x: m.l + band * i, y: m.t, width: band * (j - i + 1), height: ih, fill: "url(#hatch-gap)", opacity: 0.8 }));
             if ((j - i + 1) * band > 120 && opts.gapLabel) {
-              svg.append(s("text", { x: m.l + band * (i + j + 1) / 2, y: m.t + 14, "text-anchor": "middle" }, opts.gapLabel));
+              svg.append(s("text", { x: m.l + band * (i + j + 1) / 2, y: m.t + ih / 2, "text-anchor": "middle" }, opts.gapLabel));
             }
             i = j + 1;
           } else i++;
@@ -185,7 +188,8 @@
           const hgt = Math.max(0.5, yB - yA - (opts.stacks.length > 1 ? 1 : 0));
           svg.append(s("rect", {
             x: X(i), y: yA, width: bw, height: hgt, rx: bw > 8 ? 2 : 0,
-            fill: st.pattern ? "url(#hatch-proj)" : st.color, stroke: st.pattern ? "var(--series-2)" : null, "stroke-width": st.pattern ? 1 : null,
+            fill: st.pattern === "model" ? "url(#hatch-model)" : st.pattern ? "url(#hatch-proj)" : st.color,
+            stroke: st.pattern === "model" ? "var(--series-1)" : st.pattern ? "var(--series-2)" : null, "stroke-width": st.pattern ? 1 : null,
           }));
         }
         if (opts.whisker && opts.whisker.hi[i] !== null && opts.whisker.hi[i] !== opts.whisker.lo[i]) {
@@ -331,29 +335,37 @@
     const years = summary.years;
     const cats = years.map(y => y.year);
     const cost = years.map(y => y.totals ? y.totals.cost : 0);
+    const modelOf = y => (!y.totals && y.aggregate && y.aggregate.model && y.aggregate.model.role === "estimate") ? y.aggregate.model : null;
+    const model = years.map(y => (modelOf(y) ? modelOf(y).mid : 0));
+    const wLo = years.map(y => (modelOf(y) ? modelOf(y).low : null));
+    const wHi = years.map(y => (modelOf(y) ? modelOf(y).high : null));
     const paid = years.map(y => y.paid && y.paid.cash !== undefined ? y.paid.cash : (intlDE.wb_interest[y.year] ?? null));
-    const gaps = years.map(y => !y.totals);
+    const gaps = years.map(y => !y.totals && !modelOf(y));
     const sel = cats.indexOf(state.year);
     const box = h("div", { class: "chart" });
     const card = h("section", { class: "card chart-card", "aria-labelledby": "ov-h" },
       h("h2", { id: "ov-h" }, "Überblick: eingegangene Zinslast je Jahrgang"),
-      h("p", { class: "chart-sub" }, "Säule = Finanzierungskosten bis Fälligkeit der im Jahr aufgenommenen Kredite (Deutschland, Bund). Punkt = im Jahr tatsächlich gezahlte Zinsen auf alle Schulden. Jahr anklicken zum Wechseln."),
+      h("p", { class: "chart-sub" }, "Säule = Finanzierungskosten bis Fälligkeit der im Jahr aufgenommenen Kredite (Deutschland, Bund). Punkt = im Jahr tatsächlich gezahlte Zinsen auf alle Schulden. Beträge vor 1999 von D-Mark in Euro umgerechnet (1,95583), nicht inflationsbereinigt. Jahr anklicken zum Wechseln."),
       h("div", { class: "legend" },
-        h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), "Zinslast des Jahrgangs (bis Fälligkeit)"),
+        h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), "Zinslast des Jahrgangs, aus Einzelemissionen berechnet (ab 1999)"),
+        h("span", null, h("span", { class: "key", style: "background-image:repeating-linear-gradient(135deg,var(--series-1) 0 2px,transparent 2px 5px);border:1px solid var(--series-1)" }), "modelliert aus Bundesbank-Aggregaten, Linie = Spanne (1960–1998)"),
         h("span", null, h("span", { class: "key dot", style: "background:var(--paid)" }), "gezahlte Zinsen im Jahr (bis 1994 Weltbank, ab 1995 amtlich)"),
         h("span", null, h("span", { class: "key hatch" }), "keine Einzelemissionsdaten")),
       box);
     queueMicrotask(() => cleanups.push(barChart(box, {
-      cats, stacks: [{ key: "cost", color: "var(--series-1)", values: cost }], dots: { values: paid, color: "var(--paid)" },
+      cats, stacks: [{ key: "cost", color: "var(--series-1)", values: cost }, { key: "model", pattern: "model", values: model }],
+      whisker: { lo: wLo, hi: wHi }, dots: { values: paid, color: "var(--paid)" },
       gaps, gapLabel: "keine ausreichenden Daten für Jahrgangskosten", selected: sel, height: 200, focusable: false,
       xEvery: 10, ariaLabel: "Überblick der Jahrgangskosten und gezahlten Zinsen 1945 bis heute",
       tooltip: i => {
         const y = years[i];
         const rows = [];
+        const md = modelOf(y);
         rows.push(y.totals ? { color: "var(--series-1)", value: money(y.totals.cost), label: "Zinslast des Jahrgangs" + (y.totals.partial ? " (Jahr läuft)" : "") }
+          : md ? { color: "var(--series-1)", value: `${money(md.low)} – ${money(md.high)}`, label: "modelliert (Größenordnung)" }
           : { value: "keine ausreichenden Daten", label: "Jahrgangskosten" });
         if (paid[i] !== null) rows.push({ color: "var(--paid)", value: money(paid[i]), label: y.paid && y.paid.cash !== undefined ? "gezahlte Zinsen (amtlich)" : "gezahlte Zinsen (Weltbank)" });
-        return { head: String(y.year), rows };
+        return { head: String(y.year), rows, note: md ? "Modell: Brutto-Absatz × Emissionsrendite × angenommene Laufzeit" : null };
       },
       onClick: i => { location.hash = `#/DE/${cats[i]}`; },
     })));
@@ -387,6 +399,13 @@
         [h("div", { class: "sub" }, "Emissionserlös ", h("strong", null, money(t.proceeds)), ` aus ${v.issues.filter(i => i.cost !== undefined).length} Emissionen`),
           t.retained ? h("div", { class: "sub" }, "Zusätzlich ", h("strong", null, money(t.retained)), " in den Eigenbestand genommen (nicht verkauft; ", chip("none", "Verkaufserlös unbekannt"), ")") : null,
           partial ? h("div", { class: "sub" }, `Laufendes Jahr: Emissionen bis ${dateDe(v.data_through)}.`) : null]));
+    } else if (v.aggregate && v.aggregate.gross) {
+      const ag = v.aggregate;
+      tiles.push(tile(h("span", null, h("b", null, "1 · Neu aufgenommen"), " – Anleihen des Bundes, Brutto-Absatz (Nennwert)"), chip("official", "amtlich: Bundesbank"),
+        h("div", { class: "value" }, money(ag.gross)),
+        [ag.gross_dm ? h("div", { class: "sub" }, "= ", h("strong", null, nf1.format(ag.gross_dm / 1000) + " Mrd. DM"), " (umgerechnet 1,95583 DM/€)") : null,
+          ag.gross_le4 !== null ? h("div", { class: "sub" }, "Laufzeit bis 4 Jahre ", h("strong", null, money(ag.gross_le4)), " · über 4 Jahre ", h("strong", null, money(ag.gross_gt4))) : null,
+          h("div", { class: "sub" }, "Nur Anleihen (Inhaberschuldverschreibungen); Kredite, Schuldscheindarlehen und Geldmarkttitel fehlen. Keine Einzelemissionen ", chip("none", "Kurs, Kupon, Fälligkeit je Emission unbekannt"))]));
     } else {
       tiles.push(tile(h("span", null, h("b", null, "1 · Neu aufgenommen")), chip("none"), h("div", { class: "value nodata" }, "Keine Einzelemissionsdaten"),
         [v.split ? h("div", { class: "sub" }, "Amtliche Bruttokreditaufnahme: ", h("strong", null, money(v.split.gross)), " ", chip("official")) : null]));
@@ -399,8 +418,10 @@
         h("div", { class: "value" }, money(sp.net), h("span", { class: "sub", style: "font-size:.85rem;font-weight:400" }, " netto")),
         [h("div", { class: "split-bar", role: "img", "aria-label": `Anteil Anschlussfinanzierung ${nf0.format(refShare * 100)} Prozent` },
           h("span", { style: `width:${refShare * 100}%;background:var(--series-1-soft)` }), h("span", { style: `width:${(1 - refShare) * 100}%;background:var(--series-1)` })),
-          h("div", { class: "sub" }, "Tilgungen (Anschlussfinanzierung) ", h("strong", null, money(sp.refinancing)), " · Brutto ", h("strong", null, money(sp.gross)), " ", chip("official")),
+          h("div", { class: "sub" }, "Tilgungen (Anschlussfinanzierung) ", h("strong", null, money(sp.refinancing)), " · Brutto ", h("strong", null, money(sp.gross)), " ", chip("official", sp.source === "bundesbank" ? "amtlich: Bundesbank" : null)),
           sp.cost_net !== undefined ? h("div", { class: "sub" }, "Zinslast rechnerisch auf zusätzliche Verschuldung: ", h("strong", null, money(sp.cost_net)), ` (${nf0.format(sp.share_net * 100)} % proportional)`) : null,
+          sp.cost_net_model ? h("div", { class: "sub" }, "Zinslast rechnerisch auf zusätzliche Verschuldung (modelliert): ", h("strong", null, `${money(sp.cost_net_model[0])} – ${money(sp.cost_net_model[2])}`)) : null,
+          sp.source === "bundesbank" ? h("div", { class: "sub" }, "Nur Anleihen des Bundes; netto = Veränderung des Umlaufs laut Bundesbank, Tilgung = Brutto − netto. Umstellungen der Statistik (z. B. 1957, 1990) können Sprünge verursachen.") : null,
           !sp.complete_year ? h("div", { class: "sub" }, `Amtliche Werte bis ${dateDe(sp.as_of)}.`) : null]));
     } else {
       tiles.push(tile(h("span", null, h("b", null, "2 · Anschlussfinanzierung / zusätzliche Nettoverschuldung")), chip("none"), h("div", { class: "value nodata" }, "Keine amtlichen Brutto-/Tilgungsdaten"), []));
@@ -413,9 +434,17 @@
         [band ? h("div", { class: "sub" }, "davon fest ", h("strong", null, money(t.cost_fixed)), "; gesamt ", h("strong", null, money(t.cost_low) + " bis " + money(t.cost_high)), " ", chip("proj", "Projektion 0–4 % Inflation")) : null,
           h("div", { class: "sub" }, "Ø Rendite ", h("strong", null, pct(t.avg_yield)), " · Ø Laufzeit ", h("strong", null, nf1.format(t.avg_term) + " J.")),
           t.cost < 0 ? h("div", { class: "sub" }, "Negativ: Anleihen wurden über dem Rückzahlungsbetrag verkauft (negative Renditen).") : null]));
+    } else if (v.aggregate && v.aggregate.model) {
+      const m = v.aggregate.model, terms = summary.model_terms;
+      tiles.push(tile(h("span", null, h("b", null, "3 · Finanzierungskosten bis Fälligkeit"), " – Größenordnung"), chip("model", "modelliert, grobe Spanne"),
+        h("div", { class: "value" }, `${money(m.low)} – ${money(m.high)}`),
+        [h("div", { class: "sub" }, "Mittelwert ", h("strong", null, money(m.mid)), " · Ø Emissionsrendite ", h("strong", null, pct(v.aggregate.em_yield))),
+          h("div", { class: "sub" }, `Modell: Brutto-Absatz × Emissionsrendite des Monats × Laufzeit (bis 4 J.: ${nf1.format(terms.short[0])}/${nf1.format(terms.short[1])}/${nf1.format(terms.short[2])} J.; über 4 J.: ${nf0.format(terms.long[0])}/${nf0.format(terms.long[1])}/${nf0.format(terms.long[2])} J.), Ausgabe zu pari.`),
+          m.volume_fallback_yield ? h("div", { class: "sub" }, `Für ${money(m.volume_fallback_yield)} ohne veröffentlichte Emissionsrendite wurde die Umlaufsrendite des Monats verwendet.`) : null,
+          summary.model_backtest && summary.model_backtest.normal_years ? h("div", { class: "sub" }, `Rückrechnung ${summary.model_backtest.normal_years[0]}–${summary.model_backtest.normal_years[1]}: exakter Wert in ${summary.model_backtest.normal_in_band} von ${summary.model_backtest.normal_n} Jahren in der Spanne, Mittelwert meist zu hoch. `, h("a", { href: "#/pruefung" }, "Details")) : null]));
     } else {
       tiles.push(tile(h("span", null, h("b", null, "3 · Finanzierungskosten bis Fälligkeit")), chip("none"), h("div", { class: "value nodata" }, "Keine ausreichenden Daten"),
-        [h("div", { class: "sub" }, "Aus Schuldenstand oder Zinssumme lässt sich ein Jahrgang nicht rekonstruieren.")]));
+        [h("div", { class: "sub" }, v.aggregate && v.aggregate.gross ? "Für diese Jahre veröffentlicht die Bundesbank keine Emissionsrendite; ohne Zinssatz lässt sich keine Zinslast abschätzen." : "Aus Schuldenstand oder Zinssumme lässt sich ein Jahrgang nicht rekonstruieren.")]));
     }
     // 5. Tatsächlich gezahlt
     const p = v.paid;
@@ -447,9 +476,17 @@
     const card = h("section", { class: "card chart-card", "aria-labelledby": "main-h" },
       h("h2", { id: "main-h" }, "Welche Zinslast wurde in diesem Jahr für die Zukunft eingegangen?"));
     const t = v.totals;
+    if (!t && v.aggregate && v.aggregate.model) {
+      const m = v.aggregate.model;
+      card.append(h("p", null, chip("model"), ` Grobe Größenordnung für ${v.year}: `, h("strong", null, `${money(m.low)} bis ${money(m.high)}`), ` (Mittelwert ${money(m.mid)}).`),
+        h("p", { class: "muted" }, "Eine Aufteilung nach Zahlungsjahren ist nicht möglich, weil Kupon, Ausgabekurs und Fälligkeit der einzelnen Anleihen in den verwendeten Quellen fehlen. ",
+          "Die Spanne entsteht aus Annahmen über die Laufzeit; sie ist keine Berechnung aus Einzelemissionen und nicht mit den Werten ab 1999 gleichwertig."));
+      return card;
+    }
     if (!t) {
       card.append(h("p", null, chip("none"), " Für ", String(v.year), " liegen keine Einzelemissionen vor. Die Zinslast dieses Jahrgangs wird deshalb nicht berechnet und nicht geschätzt."),
         h("p", { class: "muted" }, v.year < 1949 ? "In diesem Jahr gab es noch keinen Bund als Schuldner." :
+          v.aggregate && v.aggregate.gross ? "Die Bundesbank weist für dieses Jahr zwar das begebene Volumen aus, aber keine Emissionsrendite (erst ab 1960)." :
           "Die Emissionshistorie der Finanzagentur beginnt 1999. Für frühere Jahre müssten Emissionsdaten der Bundesschuldenverwaltung bzw. Bundesbank erschlossen werden."));
       return card;
     }
@@ -614,10 +651,14 @@
       if (v.coverage !== null && v.coverage !== undefined) items.push(`Abdeckung: Die zugeteilten Emissionen entsprechen ${nf0.format(v.coverage * 100)} % der amtlichen Bruttokreditaufnahme. Der Rest entfällt u. a. auf Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente (z. B. Bundesschatzbriefe und Finanzierungsschätze bis 2012, Schuldscheindarlehen, Daueremissionen) und Geldmarktkredite.`);
       items.push("Zins- und Währungsswaps des Bundes sind nicht berücksichtigt.");
       if (v.issues.some(i => i.kind === "fixed_fx")) items.push("US-Dollar-Anleihen: modelliert zum Euro-Gegenwert der Emissionshistorie.");
+    } else if (v.aggregate && v.aggregate.model) {
+      items.push("Keine Einzelemissionen: Zinslast nur als modellierte Spanne aus Bundesbank-Aggregaten (Brutto-Absatz, Emissionsrendite) mit Laufzeitannahmen; keine Aufteilung nach Zahlungsjahren.");
+      items.push("Erfasst sind nur Anleihen des Bundes. Kredite, Schuldscheindarlehen, Ausgleichsforderungen und Geldmarkttitel fehlen.");
+      items.push("Beträge von D-Mark in Euro umgerechnet (1,95583 DM/€), nicht inflationsbereinigt.");
     } else {
-      items.push("Für dieses Jahr liegen in den geprüften Quellen keine Einzelemissionen vor; Jahrgangskosten werden weder berechnet noch geschätzt.");
+      items.push("Für dieses Jahr liegen in den geprüften Quellen keine Einzelemissionen und keine Emissionsrenditen vor; Jahrgangskosten werden weder berechnet noch geschätzt.");
     }
-    if (!v.split) items.push("Amtliche Bruttokreditaufnahme und Tilgungen aus dem Schuldenbericht liegen erst ab 1995 vor.");
+    if (!v.split) items.push("Amtliche Bruttokreditaufnahme und Tilgungen: Schuldenbericht ab 1995, Anleihen des Bundes laut Bundesbank ab 1948.");
     if (v.paid.status === "intl") items.push("Gezahlte Zinsen stammen aus der Weltbank-Datenbank (Zentralstaat) und sind nicht direkt mit den Bundeszahlen ab 1995 vergleichbar.");
     return h("section", { class: "card", "aria-labelledby": "gap-h" },
       h("h2", { id: "gap-h" }, "Datenlücken und Annahmen für " + v.year),
@@ -660,22 +701,26 @@
   // ------------------------------------------------------------------ Regierungen
   async function viewGovernments() {
     const g = await load("data/de/governments.json");
+    const running = x => (x.last === g.last_year ? " (laufend)" : "");
     const rows = g.governments.slice().reverse().map(x => h("tr", null,
       h("td", null, x.head, h("div", { class: "muted" }, x.parties)),
       h("td", { class: "num" }, "ab " + dateDe(x.from)),
-      x.n ? h("td", { class: "r" }, money(x.allotted)) : h("td", null, chip("none")),
-      x.n ? h("td", { class: "r" }, money(x.cost), x.cost_low !== x.cost_high ? h("div", { class: "muted" }, `${money(x.cost_low)} – ${money(x.cost_high)}`) : null) : h("td", null, ""),
-      x.n ? h("td", { class: "r" }, x.proceeds ? nf2.format(x.cost / x.proceeds * 100) + " €" : "–") : h("td", null, ""),
-      h("td", null, x.first ? `${x.first}–${x.last}${x.last === g.last_year ? " (laufend)" : ""}` : "–")));
+      x.n ? h("td", { class: "r" }, money(x.cost),
+        x.cost_low !== x.cost_high ? h("div", { class: "muted" }, `${money(x.cost_low)} – ${money(x.cost_high)}`) : null,
+        h("div", { class: "muted" }, `${x.first}–${x.last}${running(x)} · zugeteilt ${money(x.allotted)}`)) : h("td", { class: "r" }, chip("none", "keine Einzelemissionen")),
+      x.model_mid !== undefined ? h("td", { class: "r" }, `${money(x.model_low)} – ${money(x.model_high)}`,
+        h("div", { class: "muted" }, `Mitte ${money(x.model_mid)} · ${x.model_first}–${x.model_last}`)) : h("td", { class: "r" }, x.n ? "–" : chip("none"))));
     app.replaceChildren(h("h1", null, "Eingegangene Zinslast je Bundesregierung"),
-      h("p", null, "Summe der Finanzierungskosten bis Fälligkeit aller Emissionen, die in der Amtszeit einer Bundesregierung begeben wurden (Deutschland, Bund, ab 1999). ",
-        "Enthalten sind nur die feststehenden bzw. projizierten Kosten der ursprünglichen Kredite, nicht deren spätere Anschlussfinanzierung."),
+      h("p", null, "Summe der Finanzierungskosten bis Fälligkeit der Kredite, die in der Amtszeit einer Bundesregierung aufgenommen wurden (Deutschland, Bund). ",
+        "Enthalten sind nur die Kosten der ursprünglichen Kredite, nicht deren spätere Anschlussfinanzierung."),
       h("p", { class: "note" }, g.note),
       h("section", { class: "card" }, h("div", { class: "table-scroll" }, h("table", null,
-        h("thead", null, h("tr", null, h("th", null, "Regierung"), h("th", null, "Beginn"), h("th", { class: "r" }, "zugeteilt"), h("th", { class: "r" }, "Kosten bis Fälligkeit"),
-          h("th", { class: "r" }, "je 100 € Erlös"), h("th", null, "Jahre mit Daten"))),
+        h("thead", null, h("tr", null, h("th", null, "Regierung"), h("th", null, "Beginn"),
+          h("th", { class: "r" }, "aus Einzelemissionen berechnet (ab 1999)"), h("th", { class: "r" }, "modelliert, Größenordnung (1960–1998)"))),
         h("tbody", null, rows)))),
-      h("p", { class: "muted" }, "Die Regierung Schröder ist erst ab 1999 erfasst; laufende Amtszeiten sind unvollständig. Kosten negativer Renditen (2015–2021) sind negativ. Regierungen vor 1999: keine ausreichenden Daten."));
+      h("p", { class: "muted" }, "Die beiden Spalten sind nicht gleichwertig: Die berechneten Werte stammen aus jeder einzelnen Emission; die modellierten Spannen aus monatlichen Bundesbank-Aggregaten mit Laufzeitannahmen, nur für Anleihen, zugeordnet nach dem Monat der Begebung. ",
+        "Beträge vor 1999 von D-Mark in Euro umgerechnet, nicht inflationsbereinigt – Summen verschiedener Jahrzehnte sind deshalb nur eingeschränkt vergleichbar. ",
+        "1949–1959: keine ausreichenden Daten (keine Emissionsrendite). Kosten negativer Renditen (2015–2021) sind negativ."));
   }
 
   // ------------------------------------------------------------------ Quellen
@@ -759,6 +804,8 @@
   // ------------------------------------------------------------------ Prüfung
   async function viewVerification() {
     const v = await load("data/de/verification.json");
+    const bt = (await load("data/de/summary.json")).model_backtest;
+    const btBox = h("div", { class: "chart" });
     const yRows = Object.entries(v.yields).map(([k, x]) => h("tr", null, h("td", null, k), h("td", { class: "r" }, String(x.n)),
       h("td", { class: "r" }, nf1.format(x.share * 100) + " %"), h("td", { class: "r" }, nf3.format(x.median_abs_diff)), h("td", { class: "r" }, nf3.format(x.max_abs_diff))));
     const cov = Object.entries(v.coverage);
@@ -786,7 +833,22 @@
       h("p", null, "Anteil der zugeteilten Emissionen an der Bruttokreditaufnahme laut Schuldenbericht. Der Rest: Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente, Geldmarktkredite."),
       box,
       tableView("Als Tabelle anzeigen", [{ t: "Jahr" }, { t: "zugeteilt", r: 1 }, { t: "amtl. Bruttokreditaufnahme", r: 1 }, { t: "Anteil", r: 1 }],
-        cov.map(([y, x]) => [y + (x.complete_year ? "" : " (unvollständig)"), money(x.allotted), money(x.gross_official), nf0.format(x.share * 100) + " %"]))));
+        cov.map(([y, x]) => [y + (x.complete_year ? "" : " (unvollständig)"), money(x.allotted), money(x.gross_official), nf0.format(x.share * 100) + " %"])),
+      h("h2", null, "6. Rückrechnung des Modells für die Jahre vor 1999"),
+      h("p", null, "Für 1960–1998 gibt es keine Einzelemissionen. Die Zinslast wird dort aus Bundesbank-Aggregaten modelliert (Brutto-Absatz × Emissionsrendite × Laufzeitannahme). ",
+        "Um die Güte zu prüfen, wird dasselbe Modell auf die Jahre ab 1999 angewendet und mit den exakt aus Einzelemissionen berechneten Werten verglichen."),
+      bt.normal_years ? h("p", null, h("strong", null, `${bt.normal_years[0]}–${bt.normal_years[1]}: exakter Wert in ${bt.normal_in_band} von ${bt.normal_n} Jahren innerhalb der Modellspanne.`),
+        " Der Mittelwert des Modells liegt meist darüber (u. a., weil die Bundesbank-Summen ab 2000 auch Geldmarktpapiere enthalten). Bei Renditen nahe null oder negativ (ab 2015) ist das Modell unbrauchbar; vor 1999 lagen die Renditen zwischen etwa 4 und 10 %.") : null,
+      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), "exakt aus Einzelemissionen"),
+        h("span", null, h("span", { class: "key dot", style: "background:var(--series-2)" }), "Modell Mitte; Linie = Modellspanne")),
+      btBox,
+      tableView("Als Tabelle anzeigen", [{ t: "Jahr" }, { t: "exakt berechnet", r: 1 }, { t: "Modell tief", r: 1 }, { t: "Modell Mitte", r: 1 }, { t: "Modell hoch", r: 1 }, { t: "in Spanne" }],
+        bt.rows.map(r => [String(r.year), money(r.exact), money(r.low), money(r.mid), money(r.high), r.in_band ? "ja" : "nein"]))));
+    queueMicrotask(() => cleanups.push(barChart(btBox, {
+      cats: bt.rows.map(r => r.year), stacks: [{ color: "var(--series-1)", values: bt.rows.map(r => r.exact) }],
+      whisker: { lo: bt.rows.map(r => r.low), hi: bt.rows.map(r => r.high) }, dots: { values: bt.rows.map(r => r.mid), color: "var(--series-2)" }, height: 220, xEvery: 5,
+      tooltip: i => { const r = bt.rows[i]; return { head: String(r.year), rows: [{ color: "var(--series-1)", value: money(r.exact), label: "exakt berechnet" }, { color: "var(--series-2)", value: money(r.mid), label: `Modell Mitte (Spanne ${money(r.low)} – ${money(r.high)})` }] }; },
+    })));
     const complete = cov.filter(([, x]) => x.complete_year);
     queueMicrotask(() => cleanups.push(barChart(box, {
       cats: complete.map(([y]) => y), stacks: [{ color: "var(--series-1)", values: complete.map(([, x]) => x.share * 100) }], height: 200,

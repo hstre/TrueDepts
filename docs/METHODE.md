@@ -37,6 +37,7 @@ Fälligkeit. So wird sichtbar, welche Zahlungspflichten eine Regierung ihren Nac
 | Finanzagentur, *Schuldenbericht* | Monatlich seit 1995: Bruttokreditaufnahme, Tilgungen, Zinsen (kassenmäßig und inkl. periodengerechter Verteilung), Schuldenstand | Gezahlte Zinsen (Vergleichszahl), Aufteilung Anschluss-/Nettofinanzierung, Abdeckungsgrad |
 | Weltbank WDI `GC.XPN.INTP.CN` | Zinszahlungen des Zentralstaats, Landeswährung | Vergleichszahl für Jahre/Länder ohne amtliche Einzeldaten |
 | IWF WEO `GGXWDG_NGDP` | Bruttoschulden des Gesamtstaats in % des BIP | Nur Kontext; nie für Jahrgangskosten |
+| Bundesbank, Kapitalmarktstatistik (BBSIS) | Monatlich: Brutto-Absatz von Bundesanleihen (ab 1948; nach Laufzeit bis/über 4 Jahre ab 1960), Emissions- und Umlaufsrendite von Bundeswertpapieren (ab 1960), Umlauf | Jahre vor 1999: amtliches Emissionsvolumen, Nettoabsatz, **modellierte** Größenordnung der Zinslast (4.9) |
 
 Für weitere Länder sind die amtlichen Auktionsquellen im Quellenverzeichnis (`pipeline/sources.py`,
 Abschnitt `CANDIDATES`) vermerkt; importiert ist bisher nur Deutschland.
@@ -140,6 +141,28 @@ Emissionen werden nach Emissionstag der jeweils amtierenden Bundesregierung zuge
 im Haushaltsgesetz, die Emission führt die Finanzagentur aus, und Haushalte werden teils von Vorgängern
 beschlossen.
 
+### 4.9 Jahre vor 1999: modellierte Größenordnung – **modelliert**
+Für 1949–1998 gibt es in den geprüften Quellen keine Einzelemissionen (Kupon, Ausgabekurs, Fälligkeit je Anleihe).
+Die Bundesbank veröffentlicht aber je Monat das begebene Volumen von Bundesanleihen (Brutto-Absatz, nominal,
+getrennt nach vereinbarter Laufzeit bis bzw. über 4 Jahre) und die durchschnittliche Emissionsrendite. Daraus:
+```
+Zinslast eines Monats ≈ Emissionsrendite × (Volumen bis 4 J. × T_kurz + Volumen über 4 J. × T_lang)
+T_kurz = 1 / 2,5 / 4 Jahre,  T_lang = 6 / 9 / 12 Jahre  (tief / mittel / hoch)
+```
+Annahmen: Ausgabe zu pari, jährlicher Kupon gleich Emissionsrendite, keine Aufteilung nach Zahlungsjahren.
+Fehlt in einem Monat die Emissionsrendite, wird die Umlaufsrendite desselben Monats verwendet (ausgewiesen).
+Vor 1960 gibt es keine Emissionsrendite → „keine ausreichenden Daten“. D-Mark-Beträge werden mit 1,95583 in Euro
+umgerechnet (nicht inflationsbereinigt). Erfasst sind nur Anleihen, nicht Kredite, Schuldscheindarlehen,
+Ausgleichsforderungen oder Geldmarkttitel.
+
+**Rückrechnung:** Dasselbe Modell auf 1999–2014 angewendet enthält den exakt aus
+Einzelemissionen berechneten Wert in 15 von 16 Jahren; der Mittelwert liegt meist zu hoch.
+Bei Renditen nahe null (ab 2015) versagt das Modell. Das Ergebnis ist daher nur eine grobe Größenordnung und wird
+auf der Website nie mit berechneten Werten vermischt.
+
+Anschlussfinanzierung vor 1995: Nettoabsatz = Veränderung des Umlaufs von Bundesanleihen, Tilgung = Brutto-Absatz −
+Nettoabsatz (Bundesbank). Statistische Umstellungen (z. B. 1957, 1990) können Sprünge verursachen.
+
 ## 5. Vollständig durchgerechnetes Beispiel
 
 **Aufstockung der Bundesobligation 2,90 % 08.10.2031 (ISIN DE000BU25075) am 22.09.2026**
@@ -219,7 +242,8 @@ Die Ergebnisse erscheinen auf der Website unter „Prüfung“.
 
 ## 7. Bekannte Grenzen
 
-- Vor 1999 gibt es in den verwendeten Quellen keine Einzelemissionen → Jahrgangskosten „keine ausreichenden Daten“.
+- Vor 1999 gibt es in den verwendeten Quellen keine Einzelemissionen → für 1960–1998 nur eine modellierte
+  Größenordnung aus Bundesbank-Aggregaten (4.9), für 1945–1959 „keine ausreichenden Daten“.
 - Verkäufe aus dem Eigenbestand (Marktpflege) und nicht auktionierte Instrumente fehlen in den Jahrgangskosten.
 - Zins- und Währungsswaps des Bundes sind nicht berücksichtigt.
 - Valuta ist angenommen (T+2); bei Syndikaten kann sie abweichen.
