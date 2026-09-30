@@ -220,3 +220,6 @@ footer.site { border-top: 1px solid var(--border); color: var(--text-2); font-si
   .chip { border: 1px solid CanvasText; }
 }
 .source-list, .doc p { overflow-wrap: anywhere; }
+.coverage { font-size: .82rem; line-height: 1.35; color: var(--text); background: var(--surface-2); border-left: 3px solid var(--series-2); padding: .3rem .5rem; border-radius: 0 4px 4px 0; }
+.coverage strong { font-weight: 650; }
+.note.compare { border-left-color: var(--series-1); color: var(--text); margin: .25rem 0 .5rem; }
