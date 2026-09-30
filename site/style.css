@@ -108,6 +108,7 @@ nav.main { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .95rem; 
 nav.main a { text-decoration: none; color: var(--text-2); padding: .25rem 0; border-bottom: 2px solid transparent; }
 nav.main a[aria-current="page"] { color: var(--text); border-bottom-color: var(--series-1); }
 .theme-toggle { margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text-2); border-radius: 6px; padding: .25rem .6rem; font: inherit; font-size: .85rem; cursor: pointer; }
+.theme-toggle.lang-toggle { margin-left: .4rem; }
 
 main { padding: 1rem 0 3rem; }
 .controls { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-bottom: 1rem; }
@@ -231,3 +232,4 @@ table.wrap-cells td.r, table.wrap-cells th.r { white-space: normal; }
 .status-legend li { margin-bottom: .5rem; }
 a.btn { display: inline-block; text-decoration: none; }
 .doc .card > h2 { border-top: none; margin-top: 0; padding-top: 0; }
+.note { overflow-wrap: anywhere; }

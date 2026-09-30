@@ -1,29 +1,122 @@
 {
   "_hinweis": "Redaktionelle Zusammenstellung der Bundesregierungen (Amtsbeginn der Kanzlerin/des Kanzlers bzw. Wechsel der Koalition) und der Bundesfinanzminister ab 1998. Quelle zur Prüfung: https://www.bundesregierung.de/breg-de/bundesregierung/bundeskanzleramt/bundeskanzler-seit-1949 sowie https://de.wikipedia.org/wiki/Liste_der_deutschen_Bundesregierungen. Die Zuordnung einer Emission erfolgt nach dem Auktions- bzw. Preisfeststellungstag.",
+  "_note_en": "Editorial compilation of German federal governments (start of the chancellor's term or change of coalition) and federal finance ministers from 1998. Source for verification: https://www.bundesregierung.de/breg-de/bundesregierung/bundeskanzleramt/bundeskanzler-seit-1949 and https://de.wikipedia.org/wiki/Liste_der_deutschen_Bundesregierungen. An issue is assigned by its auction or pricing date.",
   "governments": [
-    {"id": "adenauer", "from": "1949-09-15", "head": "Konrad Adenauer", "parties": "CDU/CSU-geführte Koalitionen"},
-    {"id": "erhard", "from": "1963-10-16", "head": "Ludwig Erhard", "parties": "CDU/CSU, FDP (ab 28.10.1966 CDU/CSU allein)"},
-    {"id": "kiesinger", "from": "1966-12-01", "head": "Kurt Georg Kiesinger", "parties": "CDU/CSU, SPD"},
-    {"id": "brandt", "from": "1969-10-21", "head": "Willy Brandt", "parties": "SPD, FDP"},
-    {"id": "schmidt", "from": "1974-05-16", "head": "Helmut Schmidt", "parties": "SPD, FDP (ab 17.09.1982 SPD allein)"},
-    {"id": "kohl", "from": "1982-10-01", "head": "Helmut Kohl", "parties": "CDU/CSU, FDP"},
-    {"id": "schroeder", "from": "1998-10-27", "head": "Gerhard Schröder", "parties": "SPD, Bündnis 90/Die Grünen"},
-    {"id": "merkel1", "from": "2005-11-22", "head": "Angela Merkel", "parties": "CDU/CSU, SPD"},
-    {"id": "merkel2", "from": "2009-10-28", "head": "Angela Merkel", "parties": "CDU/CSU, FDP"},
-    {"id": "merkel3", "from": "2013-12-17", "head": "Angela Merkel", "parties": "CDU/CSU, SPD"},
-    {"id": "scholz", "from": "2021-12-08", "head": "Olaf Scholz", "parties": "SPD, Bündnis 90/Die Grünen, FDP"},
-    {"id": "scholz2", "from": "2024-11-07", "head": "Olaf Scholz", "parties": "SPD, Bündnis 90/Die Grünen (Minderheitsregierung)"},
-    {"id": "merz", "from": "2025-05-06", "head": "Friedrich Merz", "parties": "CDU/CSU, SPD"}
+    {
+      "id": "adenauer",
+      "from": "1949-09-15",
+      "head": "Konrad Adenauer",
+      "parties": "CDU/CSU-geführte Koalitionen"
+    },
+    {
+      "id": "erhard",
+      "from": "1963-10-16",
+      "head": "Ludwig Erhard",
+      "parties": "CDU/CSU, FDP (ab 28.10.1966 CDU/CSU allein)"
+    },
+    {
+      "id": "kiesinger",
+      "from": "1966-12-01",
+      "head": "Kurt Georg Kiesinger",
+      "parties": "CDU/CSU, SPD"
+    },
+    {
+      "id": "brandt",
+      "from": "1969-10-21",
+      "head": "Willy Brandt",
+      "parties": "SPD, FDP"
+    },
+    {
+      "id": "schmidt",
+      "from": "1974-05-16",
+      "head": "Helmut Schmidt",
+      "parties": "SPD, FDP (ab 17.09.1982 SPD allein)"
+    },
+    {
+      "id": "kohl",
+      "from": "1982-10-01",
+      "head": "Helmut Kohl",
+      "parties": "CDU/CSU, FDP"
+    },
+    {
+      "id": "schroeder",
+      "from": "1998-10-27",
+      "head": "Gerhard Schröder",
+      "parties": "SPD, Bündnis 90/Die Grünen"
+    },
+    {
+      "id": "merkel1",
+      "from": "2005-11-22",
+      "head": "Angela Merkel",
+      "parties": "CDU/CSU, SPD"
+    },
+    {
+      "id": "merkel2",
+      "from": "2009-10-28",
+      "head": "Angela Merkel",
+      "parties": "CDU/CSU, FDP"
+    },
+    {
+      "id": "merkel3",
+      "from": "2013-12-17",
+      "head": "Angela Merkel",
+      "parties": "CDU/CSU, SPD"
+    },
+    {
+      "id": "scholz",
+      "from": "2021-12-08",
+      "head": "Olaf Scholz",
+      "parties": "SPD, Bündnis 90/Die Grünen, FDP"
+    },
+    {
+      "id": "scholz2",
+      "from": "2024-11-07",
+      "head": "Olaf Scholz",
+      "parties": "SPD, Bündnis 90/Die Grünen (Minderheitsregierung)"
+    },
+    {
+      "id": "merz",
+      "from": "2025-05-06",
+      "head": "Friedrich Merz",
+      "parties": "CDU/CSU, SPD"
+    }
   ],
   "finance_ministers": [
-    {"from": "1998-10-27", "name": "Oskar Lafontaine"},
-    {"from": "1999-04-12", "name": "Hans Eichel"},
-    {"from": "2005-11-22", "name": "Peer Steinbrück"},
-    {"from": "2009-10-28", "name": "Wolfgang Schäuble"},
-    {"from": "2017-10-24", "name": "Peter Altmaier (kommissarisch)"},
-    {"from": "2018-03-14", "name": "Olaf Scholz"},
-    {"from": "2021-12-08", "name": "Christian Lindner"},
-    {"from": "2024-11-07", "name": "Jörg Kukies"},
-    {"from": "2025-05-06", "name": "Lars Klingbeil"}
+    {
+      "from": "1998-10-27",
+      "name": "Oskar Lafontaine"
+    },
+    {
+      "from": "1999-04-12",
+      "name": "Hans Eichel"
+    },
+    {
+      "from": "2005-11-22",
+      "name": "Peer Steinbrück"
+    },
+    {
+      "from": "2009-10-28",
+      "name": "Wolfgang Schäuble"
+    },
+    {
+      "from": "2017-10-24",
+      "name": "Peter Altmaier (kommissarisch)"
+    },
+    {
+      "from": "2018-03-14",
+      "name": "Olaf Scholz"
+    },
+    {
+      "from": "2021-12-08",
+      "name": "Christian Lindner"
+    },
+    {
+      "from": "2024-11-07",
+      "name": "Jörg Kukies"
+    },
+    {
+      "from": "2025-05-06",
+      "name": "Lars Klingbeil"
+    }
   ]
 }

@@ -34,6 +34,8 @@ pipeline/bonds.py    Rechenkern: Kalender, Stückzinsen, Kuponpläne, Kosten, Re
 pipeline/build.py    erzeugt die JSON-Dateien der Website
 pipeline/verify.py   prüft die Zahlungsströme gegen die Emissionsdaten
 site/                statische Website (HTML/CSS/JS ohne Build-Schritt und ohne externe Bibliotheken)
+site/i18n.js         englische Übersetzungen für Texte aus den Daten (Oberflächentexte stehen zweisprachig in app.js)
+docs/METHOD_EN.md    englische Fassung der Methodenbeschreibung
 tests/               Unit-Tests des Rechenkerns
 ```
 
@@ -52,6 +54,13 @@ Die Seite ist rein statisch und kann auf jedem Webserver liegen. Öffentlich err
 (Modus „Deploy from a branch“, `main`, Wurzelverzeichnis): https://hstre.github.io/TrueDepts/ – die `index.html`
 im Hauptverzeichnis leitet auf `site/` weiter. `.github/workflows/check.yml` führt bei jedem Push Tests, Build und
 Prüfung aus und veröffentlicht dieselbe Struktur auch dann, wenn Pages auf „GitHub Actions“ steht.
+
+## Sprachen
+
+Die Oberfläche ist zwischen Deutsch und Englisch umschaltbar (Schalter oben rechts). Ohne gespeicherte Wahl richtet
+sich die Sprache nach der Browsereinstellung. Texte in `app.js` stehen als `L("deutsch", "english")`; Texte, die aus den
+Daten kommen (Instrumente, Hinweise, Quellen), werden über `site/i18n.js` übersetzt. Neue deutsche Datentexte ohne
+Eintrag dort erscheinen in der englischen Ansicht unverändert auf Deutsch. Rechtlich maßgeblich ist das deutsche Impressum.
 
 ## Ein weiteres Land ergänzen
 

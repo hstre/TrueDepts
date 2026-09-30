@@ -36,11 +36,11 @@ Fälligkeit. So wird sichtbar, welche Zahlungspflichten eine Regierung ihren Nac
 | Finanzagentur, *Referenzindex-Archive* (Basisjahre 2005, 2015, 2025) | Amtliche tägliche Index-Verhältniszahlen der inflationsindexierten Bundeswertpapiere, Basisindex, 1. Kupon | Realisierte Zahlungen der ILB; Startpunkt der Projektion |
 | Finanzagentur, *Schuldenbericht* | Monatlich seit 1995: Bruttokreditaufnahme, Tilgungen, Zinsen (kassenmäßig und inkl. periodengerechter Verteilung), Schuldenstand | Gezahlte Zinsen (Vergleichszahl), Aufteilung Anschluss-/Nettofinanzierung, Abdeckungsgrad |
 | Weltbank WDI `GC.XPN.INTP.CN` | Zinszahlungen des Zentralstaats, Landeswährung | Vergleichszahl für Jahre/Länder ohne amtliche Einzeldaten |
-| IWF WEO `GGXWDG_NGDP` | Bruttoschulden des Gesamtstaats in % des BIP | Nur Kontext; nie für Jahrgangskosten |
+| IWF WEO (`GGXCNL_NGDP`, `GGXONLB_NGDP`, `GGXWDG_NGDP`) | Finanzierungssaldo, Primärsaldo, Bruttoschulden des Gesamtstaats in % des BIP | Gesamtstaat: Nettozinsen und Schuldenstand; nie für Jahrgangskosten |
 | Bundesbank, Kapitalmarktstatistik (BBSIS) | Monatlich: Brutto-Absatz von Bundesanleihen (ab 1948; nach Laufzeit bis/über 4 Jahre ab 1960), Emissions- und Umlaufsrendite von Bundeswertpapieren (ab 1960), Umlauf | Jahre vor 1999: amtliches Emissionsvolumen, Nettoabsatz, **modellierte** Größenordnung der Zinslast (4.9) |
 
-Für weitere Länder sind die amtlichen Auktionsquellen im Quellenverzeichnis (`pipeline/sources.py`,
-Abschnitt `CANDIDATES`) vermerkt; importiert ist bisher nur Deutschland.
+Für die USA siehe Abschnitt 7. Für weitere Länder sind die amtlichen Auktionsquellen im Quellenverzeichnis
+(`pipeline/sources.py`, Abschnitt `CANDIDATES`) vermerkt; importiert sind Deutschland und die USA.
 
 **Abgrenzung Deutschland:** Bund, d. h. Bundeshaushalt und die über Bundeswertpapiere finanzierten
 Sondervermögen. Nicht enthalten: Länder, Gemeinden, Sozialversicherung. Währung: Euro (ab 1999; vorher

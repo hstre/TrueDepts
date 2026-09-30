@@ -120,7 +120,7 @@ def build_us(today: dt.date, intl: dict):
     dump(SITE / "us" / "summary.json", {
         "country": "US", "first_year": FIRST_YEAR, "last_year": today.year, "years": summary,
         "last_auction": iso(last_auction), "ilb_last_official": iso(refcpi.last),
-        "scenarios": bonds.SCENARIOS, "scope": context["scope"],
+        "scenarios": bonds.SCENARIOS, "scope": context["scope"], "scope_en": context.get("scope_en"),
     })
     pol = political_context(all_issues, govs, last_auction)
     tot = defaultdict(lambda: defaultdict(float))
@@ -140,7 +140,8 @@ def build_us(today: dt.date, intl: dict):
         if t:
             e |= {k: (int(v) if k in ("n", "first", "last") else r1(v)) for k, v in t.items()}
         gov_out.append(e)
-    dump(SITE / "us" / "governments.json", {"last_year": today.year, "note": gov_note, "governments": gov_out,
+    from .build import NOTES_EN
+    dump(SITE / "us" / "governments.json", {"last_year": today.year, "note": gov_note, "note_en": NOTES_EN.get("us_governments.json"), "governments": gov_out,
                                           "finance_ministers": fms, "data_from": 1979, "gov_label": "US-Regierung (Präsidentschaft)",
                                           "currency": "USD"})
     # CSV der normalisierten Einzelemissionen

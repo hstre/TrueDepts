@@ -2,8 +2,21 @@
   "country": "US",
   "name": "Vereinigte Staaten",
   "scope": "Zentralregierung (U.S. Treasury): alle marktfähigen Treasury-Wertpapiere aus Auktionen (Bills inkl. Cash Management Bills, Notes, Bonds, TIPS, FRN). Nicht enthalten: nicht marktfähige Schulden (u. a. Bestände der Sozialversicherungs- und Treuhandfonds, Sparbriefe), Bundesstaaten und Kommunen. Die Gesamtstaat-Werte des IWF schließen Bundesstaaten und Kommunen ein.",
+  "scope_en": "Central government (U.S. Treasury): all marketable Treasury securities from auctions (bills incl. cash management bills, notes, bonds, TIPS, FRNs). Not included: non-marketable debt (incl. holdings of the Social Security and other trust funds, savings bonds), states and municipalities. The IMF general government figures include states and municipalities.",
   "periods": [
-    {"from": 1945, "to": 1978, "territory": "Vereinigte Staaten", "currency": "US-Dollar", "state": "Bundesregierung (Treasury). Auktionsdaten liegen erst ab 1979 vor."},
-    {"from": 1979, "to": 2100, "territory": "Vereinigte Staaten", "currency": "US-Dollar", "state": "Bundesregierung (Treasury)"}
+    {
+      "from": 1945,
+      "to": 1978,
+      "territory": "Vereinigte Staaten",
+      "currency": "US-Dollar",
+      "state": "Bundesregierung (Treasury). Auktionsdaten liegen erst ab 1979 vor."
+    },
+    {
+      "from": 1979,
+      "to": 2100,
+      "territory": "Vereinigte Staaten",
+      "currency": "US-Dollar",
+      "state": "Bundesregierung (Treasury)"
+    }
   ]
 }

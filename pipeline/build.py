@@ -22,7 +22,7 @@ from pathlib import Path
 from . import bbk_import, bonds
 from .de_import import (INSTRUMENT_LABEL, METHOD_LABEL, load_auctions, load_debt_report,
                         load_index_ratios, load_securities)
-from .sources import CANDIDATES, SOURCES
+from .sources import CANDIDATES, SOURCES, SOURCES_EN
 from .us_import import INSTRUMENT_LABEL as US_INSTRUMENT_LABEL
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -151,12 +151,16 @@ def first_coupon_conventions(auctions, ilb_meta):
     return out
 
 
+NOTES_EN = {}
+
+
 def governments():
     return governments_from("de_governments.json")
 
 
 def governments_from(fname):
     g = json.loads((META / fname).read_text(encoding="utf-8"))
+    NOTES_EN[fname] = g.get("_note_en")
     govs = sorted(g["governments"], key=lambda x: x["from"])
     fms = sorted(g["finance_ministers"], key=lambda x: x["from"])
     return govs, fms, g["_hinweis"]
@@ -360,7 +364,7 @@ def main():
                            "normal_n": len(normal), "normal_in_band": sum(b["in_band"] for b in normal)},
         "country": "DE", "first_year": FIRST_YEAR, "last_year": today.year, "years": summary,
         "last_auction": iso(last_auction), "ilb_last_official": iso(ilb_last),
-        "scenarios": bonds.SCENARIOS, "scope": context["scope"],
+        "scenarios": bonds.SCENARIOS, "scope": context["scope"], "scope_en": context.get("scope_en"),
         "model_terms": {"short": bbk_import.TERM_SHORT, "long": bbk_import.TERM_LONG},
     })
     all_issues = [i for y in sorted(issues_by_year) for i in issues_by_year[y]]
@@ -371,7 +375,7 @@ def main():
         gv = gv | {"context": pol.get(gv["id"])}
         gov_out.append(gv | ({k: (r1(v) if k not in ("first", "last", "n", "model_first", "model_last") else int(v))
                               for k, v in t.items()} if t else {}))
-    dump(SITE / "de" / "governments.json", {"last_year": today.year, "note": gov_note, "governments": gov_out, "finance_ministers": fms,
+    dump(SITE / "de" / "governments.json", {"last_year": today.year, "note": gov_note, "note_en": NOTES_EN.get("de_governments.json"), "governments": gov_out, "finance_ministers": fms,
                                           "data_from": 1999, "gov_label": "Bundesregierung", "currency": "EUR"})
 
     # --- Vereinigte Staaten ---
@@ -398,11 +402,14 @@ def main():
     dump(SITE / "intl.json", intl)
     manifest = json.loads((ROOT / "data" / "raw" / "MANIFEST.json").read_text(encoding="utf-8"))
     dump(SITE / "sources.json", {
-        "sources": [{"id": k} | {kk: vv for kk, vv in v.items()} | {"retrieval": manifest.get(k)} for k, v in SOURCES.items()],
+        "sources": [{"id": k} | {kk: vv for kk, vv in v.items()} | {"retrieval": manifest.get(k)}
+                    | ({"title_en": SOURCES_EN[k][0], "used_for_en": SOURCES_EN[k][1]} if k in SOURCES_EN else {})
+                    for k, v in SOURCES.items()],
         "candidates": CANDIDATES, "ilb_meta": ilb_meta, "built": today.isoformat(),
         "instrument_labels": INSTRUMENT_LABEL | US_INSTRUMENT_LABEL, "method_labels": METHOD_LABEL,
     })
     (SITE.parent / "METHODE.md").write_bytes((ROOT / "docs" / "METHODE.md").read_bytes())
+    (SITE.parent / "METHOD_EN.md").write_bytes((ROOT / "docs" / "METHOD_EN.md").read_bytes())
     (SITE / "impressum.json").write_bytes((META / "impressum.json").read_bytes())
     print(f"{len(auctions)} Emissionen, Jahre {FIRST_YEAR}–{today.year} geschrieben nach {SITE.relative_to(ROOT)}")
 

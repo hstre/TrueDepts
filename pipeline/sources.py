@@ -218,7 +218,7 @@ SOURCES = {
 # Amtliche Quellen für Einzelemissionen weiterer Länder: erfasst, aber (noch) nicht importiert.
 # "check" dokumentiert den Stand der automatischen Abrufprüfung aus dieser Arbeitsumgebung.
 CANDIDATES = [
-    {"country": "GB", "title": "UK Debt Management Office – Gilt Issuance History (Bericht D2.1E) und Gilts in Issue (D1A)",
+    {"country": "GB", "title": "UK Debt Management Office – Gilt Issuance History (report D2.1E), Gilts in Issue (D1A)",
      "url": "https://www.dmo.gov.uk/data/gilt-market/", "check": "maschinenlesbar abrufbar (XML, Emissionen seit 1981)",
      "note": "Fälligkeitstermine getilgter Gilts und RPI-Indexverhältnisse der inflationsindexierten Gilts fehlen noch; Import vorbereitet."},
     {"country": "CA", "title": "Bank of Canada – Government of Canada bond and bill auction results",
@@ -257,3 +257,40 @@ CANDIDATES = [
     {"country": "SA", "title": "National Debt Management Center – Sukuk issuance",
      "url": "https://www.ndmc.gov.sa/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
 ]
+
+# Englische Übersetzungen für die Quellenansicht (Titel, Verwendung). Die deutschen Texte oben sind maßgeblich.
+SOURCES_EN = {
+    "de_emissionshistorie": ("Auction results since 1999 (issuance history)",
+                             "Every individual issue: date, ISIN, coupon, maturity, allotted volume, retention/own holdings, weighted average price, average yield. Basis of all values marked “calculated from individual issues”."),
+    "de_einzelaufstellung_jahre": ("Outstanding federal securities – list at year-ends since 1995",
+                                   "Interest start date per ISIN for accrued interest and first coupon; check of issue volumes against amounts outstanding."),
+    "de_einzelaufstellung": ("Outstanding federal securities – current list", "Interest start date of new securities of the current year."),
+    "de_schuldenbericht": ("Debt report: debt, gross borrowing, redemptions, interest (monthly since 1995)",
+                           "Interest actually paid in the year (comparison figure), official gross borrowing and redemptions (split refinancing/net borrowing, coverage)."),
+    "de_referenzindex_2005": ("Archive of daily reference index and index ratios (base year 2005)", "Realised index ratios of inflation-linked federal securities 2006–2016."),
+    "de_referenzindex_2015": ("Archive of daily reference index and index ratios (base year 2015)",
+                              "Realised index ratios from 2016, base indices, interest start and first coupon of inflation-linked federal securities; starting point of the inflation projection."),
+    "de_referenzindex_2025": ("Daily reference index and index ratios (base year 2025)",
+                              "Current index ratios after rebasing the HICP to 2025=100; the last official value is the starting point of the inflation projection."),
+    "bbk_gross": ("Gross sales of federal bonds at nominal value (monthly from 1948)",
+                  "Gross borrowing via federal bonds before 1999 (official, aggregated); net sales from the change in amounts outstanding. From 2000 including Bubills and financing notes."),
+    "bbk_gross_le4": ("Gross sales of federal bonds, agreed maturity up to 4 years (monthly from 1960)", "Model of the interest burden 1960–1998: short-term volume."),
+    "bbk_gross_gt4": ("Gross sales of federal bonds, agreed maturity over 4 years (monthly from 1960)", "Model of the interest burden 1960–1998: long-term volume."),
+    "bbk_em_yield": ("Yields at issue of listed federal securities (monthly from 1960)", "Model of the interest burden 1960–1998: yield of federal securities issued in the month."),
+    "bbk_outstanding": ("Federal bonds outstanding at nominal value (monthly from 1948)",
+                        "Net sales = change in amount outstanding; refinancing = gross sales − net sales (before 1995)."),
+    "bbk_umlaufrendite": ("Yield on listed federal securities outstanding (monthly from 1960)",
+                          "Model 1960–1998: substitute yield for months in which volume was issued but no issue yield was published."),
+    "bbk_vgr_interest": ("Interest expenditure of general government (national accounts, ESA 2010), annual from 1970",
+                         "General government view: interest expenditure of Bund, Länder, municipalities and social security (accrual basis, national accounts)."),
+    "us_auctions": ("Treasury Securities Auctions Data (all auctions since 1979)",
+                    "Every individual auction of bills, notes, bonds, TIPS and FRNs: price, accrued interest, coupon, maturity, allotted volume. Basis of the US vintage costs."),
+    "us_interest_expense": ("Interest Expense on the Public Debt Outstanding (monthly from May 2010)",
+                            "Interest paid or accrued on federal debt per calendar year (comparison figure, complete from 2011)."),
+    "us_tips_refcpi": ("TIPS: daily reference CPI values (from May 2008)",
+                       "Index ratios of TIPS (reference CPI / reference CPI at dated date). Before May 2008: interpolation between official reference CPI values on issue dates (modelled)."),
+    "wb_interest": ("World Development Indicators: Interest payments (current LCU), GC.XPN.INTP.CN",
+                    "Interest paid by central government in local currency as a comparison figure for years and countries without official individual data. Not usable for vintage costs."),
+    "imf_weo": ("World Economic Outlook: overall balance, primary balance and gross debt of general government (% of GDP)",
+                "General government (all levels): net interest = primary balance − overall balance (% of GDP, derived) and debt. Values after the last actual year are IMF projections. Not usable for vintage costs."),
+}

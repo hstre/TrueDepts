@@ -1,49 +1,99 @@
 /* Zinslast-Jahrgänge – Frontend ohne Build-Schritt und ohne externe Bibliotheken.
  * Liest die von pipeline/build.py erzeugten JSON-Dateien aus data/.
+ * Zweisprachig: Oberflächentexte als L("deutsch", "english"); Datentexte über i18n.js.
  */
 (function () {
   "use strict";
 
+  // ------------------------------------------------------------------ Sprache
+  let LANG = "de";
+  try {
+    const stored = localStorage.getItem("lang");
+    LANG = stored || ((navigator.language || "de").toLowerCase().startsWith("de") ? "de" : "en");
+  } catch (e) { /* Speicher gesperrt */ }
+  const EN = () => LANG === "en";
+  const L = (de, en) => (LANG === "en" ? en : de);
+  const I18N = window.I18N_DATA || { exact: {}, rules: [], countries: {}, instruments: {}, methods: {} };
+  /** Datentext übersetzen (Datendateien sind deutsch). */
+  function tr(s) {
+    if (!EN() || s === null || s === undefined) return s;
+    if (I18N.exact[s] !== undefined) return I18N.exact[s];
+    for (const [re, fn] of I18N.rules) { const m = String(s).match(re); if (m) return fn(m); }
+    return s;
+  }
+  const countryName = c => (EN() && I18N.countries[c.code]) || c.name;
+
   // ------------------------------------------------------------------ Hilfen
-  const nf1 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const nf2 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const nf3 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-  const nf0 = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
+  let nf0, nf1, nf2, nf3, dtf;
+  function setLocale() {
+    const loc = EN() ? "en-GB" : "de-DE";
+    nf1 = new Intl.NumberFormat(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    nf2 = new Intl.NumberFormat(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    nf3 = new Intl.NumberFormat(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    nf0 = new Intl.NumberFormat(loc, { maximumFractionDigits: 0 });
+    dtf = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    document.documentElement.lang = LANG;
+  }
+  setLocale();
   const CUR_SYMBOL = { EUR: "€", USD: "US-$", GBP: "£", JPY: "¥" };
+  const CUR_SYMBOL_EN = { EUR: "€", USD: "US$", GBP: "£", JPY: "¥" };
   let CUR = "EUR"; // Währung der gerade angezeigten Länderansicht
 
-  const COUNTRY_META = {
-    DE: { govLabel: "Bundesregierung", govPlural: "Bundesregierung(en) im Jahr", scopeShort: "Deutschland, Bund (Zentralstaat)",
-          sourceRow: "Emissionshistorie der Finanzagentur, Tabellenzeile", paidLegend: "bis 1994 Weltbank, ab 1995 amtlich (Schuldenbericht)",
-          dataFrom: 1999, earlierNote: "Die Emissionshistorie der Finanzagentur beginnt 1999." },
-    US: { govLabel: "US-Regierung", govPlural: "Präsidentschaft(en) im Jahr", scopeShort: "USA, Zentralregierung (Treasury)",
-          sourceRow: "FiscalData Treasury Securities Auctions, Datensatz", paidLegend: "bis 2010 Weltbank, ab 2011 amtlich (FiscalData, periodengerecht)",
-          dataFrom: 1979, earlierNote: "Die Auktionsdaten von FiscalData beginnen 1979." },
-  };
+  function cmeta(code) {
+    const M = {
+      DE: {
+        govLabel: L("Bundesregierung", "federal government"), govTitle: L("Bundesregierung", "German federal government"),
+        govPlural: L("Bundesregierung(en) im Jahr", "Federal government(s) in the year"),
+        scopeShort: L("Deutschland, Bund (Zentralstaat)", "Germany, federal level (central government)"),
+        sourceRow: L("Emissionshistorie der Finanzagentur, Tabellenzeile", "Finance Agency issuance history, row"),
+        paidLegend: L("bis 1994 Weltbank, ab 1995 amtlich (Schuldenbericht)", "World Bank until 1994, official from 1995 (debt report)"),
+        dataFrom: 1999,
+      },
+      US: {
+        govLabel: L("US-Regierung", "US administration"), govTitle: L("US-Regierung", "US administration"),
+        govPlural: L("Präsidentschaft(en) im Jahr", "Administration(s) in the year"),
+        scopeShort: L("USA, Zentralregierung (Treasury)", "USA, central government (Treasury)"),
+        sourceRow: L("FiscalData Treasury Securities Auctions, Datensatz", "FiscalData Treasury Securities Auctions, record"),
+        paidLegend: L("bis 2010 Weltbank, ab 2011 amtlich (FiscalData, periodengerecht)", "World Bank until 2010, official from 2011 (FiscalData, accrual basis)"),
+        dataFrom: 1979,
+      },
+    };
+    return M[code];
+  }
 
   function money(v, cur) {
     if (v === null || v === undefined || Number.isNaN(v)) return "–";
-    const s = CUR_SYMBOL[cur || CUR] || cur || CUR;
+    const c = cur || CUR;
+    if (EN()) {
+      const sym = CUR_SYMBOL_EN[c];
+      const [num, unit] = Math.abs(v) >= 1e6 ? [nf2.format(v / 1e6), "tn"] : Math.abs(v) >= 1000 ? [nf1.format(v / 1000), "bn"] : [nf1.format(v), "m"];
+      return sym ? `${num.startsWith("-") ? "−" + sym + num.slice(1) : sym + num} ${unit}` : `${num} ${unit} ${c}`;
+    }
+    const s = CUR_SYMBOL[c] || c;
     if (Math.abs(v) >= 1e6) return nf2.format(v / 1e6) + " Bio. " + s;
     if (Math.abs(v) >= 1000) return nf1.format(v / 1000) + " Mrd. " + s;
     return nf1.format(v) + " Mio. " + s;
   }
   function moneyShort(v) {
     if (v === 0) return "0";
-    if (Math.abs(v) >= 1e6) return nf1.format(v / 1e6) + " Bio.";
-    if (Math.abs(v) >= 1000) return nf1.format(v / 1000) + " Mrd.";
-    if (Math.abs(v) >= 100) return nf0.format(v) + " Mio.";
-    return nf1.format(v) + " Mio.";
+    const [bn, mn, tn] = EN() ? [" bn", " m", " tn"] : [" Mrd.", " Mio.", " Bio."];
+    if (Math.abs(v) >= 1e6) return nf1.format(v / 1e6) + tn;
+    if (Math.abs(v) >= 1000) return nf1.format(v / 1000) + bn;
+    if (Math.abs(v) >= 100) return nf0.format(v) + mn;
+    return nf1.format(v) + mn;
   }
   function pct(v, digits) {
     if (v === null || v === undefined) return "–";
-    return (digits === 3 ? nf3 : nf2).format(v) + " %";
+    return (digits === 3 ? nf3 : nf2).format(v) + (EN() ? "%" : " %");
   }
+  const pctNum = (v, f) => (f || nf2).format(v) + (EN() ? "%" : " %");
   function dateDe(iso) {
     if (!iso) return "–";
     const [y, m, d] = iso.split("-");
+    if (EN()) return dtf.format(new Date(Date.UTC(+y, +m - 1, +d)));
     return d + "." + m + "." + y;
   }
+  const yrs = n => nf1.format(n) + L(" J.", " yrs");
 
   /** Element erzeugen. Kinder: Strings werden als Text eingefügt (nie als HTML). */
   function h(tag, attrs, ...children) {
@@ -70,18 +120,19 @@
     return el;
   }
 
-  const STATUS = {
-    calc: { ico: "●", label: "aus einzelnen Emissionen berechnet" },
-    mixed: { ico: "●", label: "berechnet, teils Projektion" },
-    model: { ico: "◆", label: "modelliert" },
-    proj: { ico: "◌", label: "Projektion" },
-    official: { ico: "▲", label: "amtliche Statistik" },
-    intl: { ico: "○", label: "internationale Datenbank" },
-    none: { ico: "–", label: "keine ausreichenden Daten" },
+  const STATUS_DEF = {
+    calc: { ico: "●", de: "aus einzelnen Emissionen berechnet", en: "calculated from individual issues" },
+    mixed: { ico: "●", de: "berechnet, teils Projektion", en: "calculated, partly projection" },
+    model: { ico: "◆", de: "modelliert", en: "modelled" },
+    proj: { ico: "◌", de: "Projektion", en: "projection" },
+    official: { ico: "▲", de: "amtliche Statistik", en: "official statistics" },
+    intl: { ico: "○", de: "internationale Datenbank", en: "international database" },
+    none: { ico: "–", de: "keine ausreichenden Daten", en: "insufficient data" },
   };
+  const statusLabel = k => { const st = STATUS_DEF[k] || STATUS_DEF.none; return L(st.de, st.en); };
   function chip(status, text) {
-    const st = STATUS[status] || STATUS.none;
-    return h("span", { class: "chip " + status, title: st.label }, h("span", { class: "ico", "aria-hidden": "true" }, st.ico), text || st.label);
+    const st = STATUS_DEF[status] || STATUS_DEF.none;
+    return h("span", { class: "chip " + status, title: statusLabel(status) }, h("span", { class: "ico", "aria-hidden": "true" }, st.ico), text || statusLabel(status));
   }
 
   async function getJSON(url) {
@@ -168,7 +219,6 @@
         s("pattern", { id: "hatch-gap", patternUnits: "userSpaceOnUse", width: 6, height: 6, patternTransform: "rotate(135)" },
           s("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: "var(--gap-hatch)", "stroke-width": 1.5 })));
       svg.append(defs);
-      // Lückenbänder
       if (opts.gaps) {
         let i = 0;
         while (i < n) {
@@ -182,14 +232,12 @@
           } else i++;
         }
       }
-      // Raster
       const g = s("g", { class: "grid" });
       for (const t of ticks) {
         g.append(s("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t) }));
         svg.append(s("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end" }, opts.yFormat ? opts.yFormat(t) : moneyShort(t)));
       }
       svg.insertBefore(g, svg.firstChild.nextSibling);
-      // Säulen
       for (let i = 0; i < n; i++) {
         let pos = 0, neg = 0;
         for (const st of opts.stacks) {
@@ -211,7 +259,6 @@
           svg.append(s("path", { d: `M${cx},${a}V${b}M${cx - cap / 2},${a}H${cx + cap / 2}M${cx - cap / 2},${b}H${cx + cap / 2}`, stroke: "var(--text)", "stroke-width": 1.5, fill: "none" }));
         }
       }
-      // Punkte (gleiche Einheit wie Säulen)
       if (opts.dots) {
         const pts = [];
         for (let i = 0; i < n; i++) {
@@ -226,7 +273,6 @@
           svg.append(s("circle", { cx: X(i) + bw / 2, cy: Y(v), r: band < 8 ? 2.5 : 3.5, fill: opts.dots.color, stroke: "var(--surface)", "stroke-width": 1.5 }));
         }
       }
-      // Nulllinie und x-Achse
       svg.append(s("line", { class: "zero", x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0) }));
       const every = opts.xEvery || Math.ceil(n / Math.max(2, Math.floor(iw / 42)));
       for (let i = 0; i < n; i++) {
@@ -238,7 +284,6 @@
       if (opts.selected !== undefined && opts.selected >= 0) {
         svg.append(s("rect", { class: "sel", x: m.l + band * opts.selected + 0.5, y: m.t, width: Math.max(2, band - 1), height: ih, rx: 2 }));
       }
-      // Trefferflächen (größer als die Marke: volle Spaltenhöhe)
       for (let i = 0; i < n; i++) {
         const hit = s("rect", { class: "hit", x: m.l + band * i, y: m.t, width: band, height: ih, tabindex: opts.focusable === false ? null : 0 });
         const show = (ev) => {
@@ -273,6 +318,7 @@
         h("thead", null, h("tr", null, headers.map(x => h("th", { class: x.r ? "r" : null }, x.t)))),
         h("tbody", null, rows.map(r => h("tr", null, r.map((c, j) => h("td", { class: headers[j].r ? "r" : null }, c))))))));
   }
+  const asTable = () => L("Als Tabelle anzeigen", "Show as table");
 
   // ------------------------------------------------------------------ Zustand & Routing
   const app = document.getElementById("app");
@@ -284,9 +330,25 @@
     document.querySelectorAll("nav.main a[aria-current]").forEach(a => a.setAttribute("aria-current", "page"));
   }
 
+  /** Statische Texte in index.html (Navigation, Fußzeile) umschalten. */
+  function applyStaticTexts() {
+    document.querySelectorAll("[data-de]").forEach(el => { el.textContent = EN() ? el.dataset.en : el.dataset.de; });
+    document.querySelectorAll("[data-html-de]").forEach(el => { el.innerHTML = EN() ? el.dataset.htmlEn : el.dataset.htmlDe; });
+    const lt = document.getElementById("langToggle");
+    lt.textContent = EN() ? "Deutsch" : "English";
+    lt.setAttribute("lang", EN() ? "de" : "en");
+    lt.setAttribute("aria-label", EN() ? "Auf Deutsch umschalten" : "Switch to English");
+    document.getElementById("themeToggle").textContent = L("Hell/Dunkel", "Light/Dark");
+    document.getElementById("themeToggle").setAttribute("aria-label", L("Farbschema wechseln", "Toggle colour scheme"));
+    document.querySelector('meta[name="description"]').setAttribute("content", L(
+      "Welche Zinslast wurde in einem Jahr für die Zukunft eingegangen? Finanzierungskosten staatlicher Kreditjahrgänge bis zur Fälligkeit, berechnet aus einzelnen Emissionen.",
+      "What interest burden was committed for the future in a given year? Financing costs of government borrowing vintages until maturity, calculated from individual issues."));
+  }
+
   async function route() {
     cleanups.forEach(f => f()); cleanups = [];
     hideTip();
+    applyStaticTexts();
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     try {
       if (parts[0] === "quellen") { setNav("quellen"); await viewSources(); }
@@ -307,8 +369,9 @@
         await viewYear(countries);
       }
     } catch (err) {
-      app.replaceChildren(h("div", { class: "card" }, h("h2", null, "Daten konnten nicht geladen werden"),
-        h("p", null, String(err)), h("p", { class: "muted" }, "Die Seite muss über einen Webserver geöffnet werden (z. B. python -m http.server im Ordner site/).")));
+      app.replaceChildren(h("div", { class: "card" }, h("h2", null, L("Daten konnten nicht geladen werden", "Data could not be loaded")),
+        h("p", null, String(err)), h("p", { class: "muted" }, L("Die Seite muss über einen Webserver geöffnet werden (z. B. python -m http.server im Ordner site/).",
+          "The page must be served by a web server (e.g. python -m http.server in the site/ folder)."))));
     }
   }
   window.addEventListener("hashchange", route);
@@ -316,26 +379,26 @@
   // ------------------------------------------------------------------ Jahresansicht
   function controls(countries) {
     const cSel = h("select", { id: "country", onchange: e => { location.hash = `#/${e.target.value}/${state.year}`; } },
-      countries.countries.map(c => h("option", { value: c.code, selected: c.code === state.country ? true : null },
-        c.name + (c.vintage_data ? "" : " – nur Vergleichsdaten"))));
+      countries.countries.slice().sort((a, b) => countryName(a).localeCompare(countryName(b), LANG)).map(c => h("option", { value: c.code, selected: c.code === state.country ? true : null },
+        countryName(c) + (c.vintage_data ? "" : L(" – nur Vergleichsdaten", " – comparison data only")))));
     const years = [];
     for (let y = countries.last_year; y >= countries.first_year; y--) years.push(y);
     const ySel = h("select", { id: "year", onchange: e => { location.hash = `#/${state.country}/${e.target.value}`; } },
       years.map(y => h("option", { value: y, selected: y === state.year ? true : null }, String(y))));
-    const prev = h("button", { class: "btn", type: "button", "aria-label": "Vorjahr", disabled: state.year <= countries.first_year ? true : null,
+    const prev = h("button", { class: "btn", type: "button", "aria-label": L("Vorjahr", "Previous year"), disabled: state.year <= countries.first_year ? true : null,
       onclick: () => { location.hash = `#/${state.country}/${state.year - 1}`; } }, "‹");
-    const next = h("button", { class: "btn", type: "button", "aria-label": "Folgejahr", disabled: state.year >= countries.last_year ? true : null,
+    const next = h("button", { class: "btn", type: "button", "aria-label": L("Folgejahr", "Next year"), disabled: state.year >= countries.last_year ? true : null,
       onclick: () => { location.hash = `#/${state.country}/${state.year + 1}`; } }, "›");
-    return h("div", { class: "controls" }, h("a", { href: "#/worum-geht-es", class: "intro-link" }, "Neu hier? Worum geht es auf dieser Seite →"),
-      h("label", { for: "country" }, "Land", cSel),
-      h("label", { for: "year" }, "Jahr", h("span", { class: "year-step" }, prev, ySel, next)));
+    return h("div", { class: "controls" }, h("a", { href: "#/worum-geht-es", class: "intro-link" }, L("Neu hier? Worum geht es auf dieser Seite →", "New here? What this site is about →")),
+      h("label", { for: "country" }, L("Land", "Country"), cSel),
+      h("label", { for: "year" }, L("Jahr", "Year"), h("span", { class: "year-step" }, prev, ySel, next)));
   }
 
   async function viewYear(countries) {
     const country = countries.countries.find(c => c.code === state.country);
     const intl = await load("data/intl.json");
     CUR = country.currency;
-    const nodes = [h("h1", null, `Kreditjahrgang ${state.year} · ${country.name}`), controls(countries)];
+    const nodes = [h("h1", null, L(`Kreditjahrgang ${state.year} · ${countryName(country)}`, `Borrowing vintage ${state.year} · ${countryName(country)}`)), controls(countries)];
     if (country.vintage_data) {
       const cc = country.code.toLowerCase();
       const [summary, yearData, sources] = await Promise.all([
@@ -345,11 +408,11 @@
       nodes.push(...renderIntlOnly(country, intl[country.code], countries));
     }
     app.replaceChildren(...nodes);
-    document.title = `${state.year} · ${country.name} · Zinslast-Jahrgänge`;
+    document.title = `${state.year} · ${countryName(country)} · ${L("Zinslast-Jahrgänge", "Interest Vintages")}`;
   }
 
   function overviewCard(summary, intlDE, country) {
-    const meta = COUNTRY_META[country.code];
+    const meta = cmeta(country.code);
     const years = summary.years;
     const cats = years.map(y => y.year);
     const cost = years.map(y => y.totals ? y.totals.cost : 0);
@@ -362,32 +425,37 @@
     const sel = cats.indexOf(state.year);
     const box = h("div", { class: "chart" });
     const card = h("section", { class: "card chart-card", "aria-labelledby": "ov-h" },
-      h("h2", { id: "ov-h" }, "Überblick: eingegangene Zinslast je Jahrgang"),
+      h("h2", { id: "ov-h" }, L("Überblick: eingegangene Zinslast je Jahrgang", "Overview: interest burden committed per vintage")),
       h("div", { class: "note compare" },
-        h("strong", null, "Säulen und Punkte messen Verschiedenes und sind in der Höhe nicht direkt vergleichbar. "),
-        h("br"), "Säule: Summe aller Zinskosten, die die in diesem Jahr erfassten Kredite über ihre ", h("em", null, "gesamte Laufzeit"), " auslösen – verteilt auf viele künftige Jahre, nur für die erfassten Emissionen.",
-        h("br"), "Punkt: Zinsen, die in ", h("em", null, "genau diesem einen Jahr"), " auf ", h("em", null, "alle"), " alten und neuen Schulden gezahlt wurden."),
-      h("p", { class: "chart-sub" }, meta.scopeShort + ". ", country.code === "DE" ? "Beträge vor 1999 von D-Mark in Euro umgerechnet (1,95583), nicht inflationsbereinigt. " : "Nominal, nicht inflationsbereinigt. ", "Jahr anklicken zum Wechseln."),
+        h("strong", null, L("Säulen und Punkte messen Verschiedenes und sind in der Höhe nicht direkt vergleichbar. ", "Bars and dots measure different things; their heights are not directly comparable. ")),
+        h("br"), L("Säule: Summe aller Zinskosten, die die in diesem Jahr erfassten Kredite über ihre ", "Bar: total interest cost that the borrowing covered in this year causes over its "),
+        h("em", null, L("gesamte Laufzeit", "entire term")),
+        L(" auslösen – verteilt auf viele künftige Jahre, nur für die erfassten Emissionen.", " – spread over many future years, covered issues only."),
+        h("br"), L("Punkt: Zinsen, die in ", "Dot: interest paid in "), h("em", null, L("genau diesem einen Jahr", "that single year")), L(" auf ", " on "), h("em", null, L("alle", "all")),
+        L(" alten und neuen Schulden gezahlt wurden.", " old and new debt.")),
+      h("p", { class: "chart-sub" }, meta.scopeShort + ". ",
+        country.code === "DE" ? L("Beträge vor 1999 von D-Mark in Euro umgerechnet (1,95583), nicht inflationsbereinigt. ", "Amounts before 1999 converted from Deutsche Mark to euro (1.95583), not adjusted for inflation. ")
+          : L("Nominal, nicht inflationsbereinigt. ", "Nominal, not adjusted for inflation. "), L("Jahr anklicken zum Wechseln.", "Click a year to switch.")),
       h("div", { class: "legend" },
-        h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), `Säule: Zinslast über die gesamte Laufzeit – erfasste Emissionen, berechnet (ab ${meta.dataFrom})`),
-        country.code === "DE" ? h("span", null, h("span", { class: "key", style: "background-image:repeating-linear-gradient(135deg,var(--series-1) 0 2px,transparent 2px 5px);border:1px solid var(--series-1)" }), "Säule: dasselbe, modelliert aus Bundesbank-Aggregaten, Linie = Spanne (1960–1998)") : null,
-        h("span", null, h("span", { class: "key dot", style: "background:var(--paid)" }), `Punkt: in einem einzelnen Jahr gezahlte Zinsen auf alle Schulden (${meta.paidLegend})`),
-        h("span", null, h("span", { class: "key hatch" }), "keine Einzelemissionsdaten")),
+        h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L(`Säule: Zinslast über die gesamte Laufzeit – erfasste Emissionen, berechnet (ab ${meta.dataFrom})`, `Bar: interest burden over the full term – covered issues, calculated (from ${meta.dataFrom})`)),
+        country.code === "DE" ? h("span", null, h("span", { class: "key", style: "background-image:repeating-linear-gradient(135deg,var(--series-1) 0 2px,transparent 2px 5px);border:1px solid var(--series-1)" }), L("Säule: dasselbe, modelliert aus Bundesbank-Aggregaten, Linie = Spanne (1960–1998)", "Bar: the same, modelled from Bundesbank aggregates, line = range (1960–1998)")) : null,
+        h("span", null, h("span", { class: "key dot", style: "background:var(--paid)" }), L(`Punkt: in einem einzelnen Jahr gezahlte Zinsen auf alle Schulden (${meta.paidLegend})`, `Dot: interest paid in a single year on all debt (${meta.paidLegend})`)),
+        h("span", null, h("span", { class: "key hatch" }), L("keine Einzelemissionsdaten", "no individual issue data"))),
       box);
     queueMicrotask(() => cleanups.push(barChart(box, {
       cats, stacks: [{ key: "cost", color: "var(--series-1)", values: cost }, { key: "model", pattern: "model", values: model }],
       whisker: { lo: wLo, hi: wHi }, dots: { values: paid, color: "var(--paid)" },
-      gaps, gapLabel: "keine ausreichenden Daten", selected: sel, height: 200, focusable: false,
-      xEvery: 10, ariaLabel: "Überblick der Jahrgangskosten und gezahlten Zinsen 1945 bis heute",
+      gaps, gapLabel: L("keine ausreichenden Daten", "insufficient data"), selected: sel, height: 200, focusable: false,
+      xEvery: 10, ariaLabel: L("Überblick der Jahrgangskosten und gezahlten Zinsen 1945 bis heute", "Overview of vintage costs and interest paid since 1945"),
       tooltip: i => {
         const y = years[i];
         const rows = [];
         const md = modelOf(y);
-        rows.push(y.totals ? { color: "var(--series-1)", value: money(y.totals.cost), label: "Zinslast der erfassten Emissionen, gesamte Laufzeit" + (y.totals.partial ? " (Jahr läuft)" : "") }
-          : md ? { color: "var(--series-1)", value: `${money(md.low)} – ${money(md.high)}`, label: "Zinslast, gesamte Laufzeit – modelliert (Größenordnung)" }
-          : { value: "keine ausreichenden Daten", label: "Jahrgangskosten" });
-        if (paid[i] !== null) rows.push({ color: "var(--paid)", value: money(paid[i]), label: y.paid && y.paid.cash !== undefined ? "in diesem Jahr gezahlt, alle Schulden (amtlich)" : "in diesem Jahr gezahlt, alle Schulden (Weltbank)" });
-        return { head: String(y.year), rows, note: md ? "Modell: Brutto-Absatz × Emissionsrendite × angenommene Laufzeit" : null };
+        rows.push(y.totals ? { color: "var(--series-1)", value: money(y.totals.cost), label: L("Zinslast der erfassten Emissionen, gesamte Laufzeit", "interest burden of covered issues, full term") + (y.totals.partial ? L(" (Jahr läuft)", " (year in progress)") : "") }
+          : md ? { color: "var(--series-1)", value: `${money(md.low)} – ${money(md.high)}`, label: L("Zinslast, gesamte Laufzeit – modelliert (Größenordnung)", "interest burden, full term – modelled (order of magnitude)") }
+          : { value: L("keine ausreichenden Daten", "insufficient data"), label: L("Jahrgangskosten", "vintage cost") });
+        if (paid[i] !== null) rows.push({ color: "var(--paid)", value: money(paid[i]), label: y.paid && y.paid.cash !== undefined ? L("in diesem Jahr gezahlt, alle Schulden (amtlich)", "paid in this year, all debt (official)") : L("in diesem Jahr gezahlt, alle Schulden (Weltbank)", "paid in this year, all debt (World Bank)") });
+        return { head: String(y.year), rows, note: md ? L("Modell: Brutto-Absatz × Emissionsrendite × angenommene Laufzeit", "Model: gross sales × issue yield × assumed term") : null };
       },
       onClick: i => { location.hash = `#/${country.code}/${cats[i]}`; },
     })));
@@ -395,15 +463,16 @@
   }
 
   function contextCard(v, summary, country) {
-    const meta = COUNTRY_META[country.code];
+    const meta = cmeta(country.code);
     const ctx = v.context || {};
-    const govs = v.governments.length ? v.governments.map(g => `${g.head} (${g.parties}, ab ${dateDe(g.from)})`).join("; ") : "–";
-    return h("section", { class: "card", "aria-label": "Rahmen des Jahres" }, h("dl", { class: "context" },
-      h("div", null, h("dt", null, "Gebietsstand"), h("dd", null, ctx.territory || "–")),
-      h("div", null, h("dt", null, "Währung"), h("dd", null, ctx.currency || "–")),
-      h("div", null, h("dt", null, "Staatsdefinition"), h("dd", null, ctx.state || "–")),
+    const govs = v.governments.length ? v.governments.map(g => `${g.head} (${tr(g.parties)}, ${L("ab", "from")} ${dateDe(g.from)})`).join("; ") : "–";
+    return h("section", { class: "card", "aria-label": L("Rahmen des Jahres", "Context of the year") }, h("dl", { class: "context" },
+      h("div", null, h("dt", null, L("Gebietsstand", "Territory")), h("dd", null, tr(ctx.territory) || "–")),
+      h("div", null, h("dt", null, L("Währung", "Currency")), h("dd", null, tr(ctx.currency) || "–")),
+      h("div", null, h("dt", null, L("Staatsdefinition", "Definition of the state")), h("dd", null, tr(ctx.state) || "–")),
       h("div", null, h("dt", null, meta.govPlural), h("dd", null, govs))),
-      h("details", { class: "table-view" }, h("summary", null, "Abgrenzung der Daten (Zentralstaat, nicht Gesamtstaat)"), h("p", { class: "muted" }, summary.scope)));
+      h("details", { class: "table-view" }, h("summary", null, L("Abgrenzung der Daten (Zentralstaat, nicht Gesamtstaat)", "Scope of the data (central government, not general government)")),
+        h("p", { class: "muted" }, EN() && summary.scope_en ? summary.scope_en : summary.scope)));
   }
 
   function tile(label, statusChip, value, subs) {
@@ -415,89 +484,101 @@
     const t = v.totals;
     if (!t) return null;
     if (v.coverage !== null && v.coverage !== undefined && v.split) {
-      return h("div", { class: "coverage" }, "Teilsumme: Die erfassten Emissionen decken ", h("strong", null, nf0.format(v.coverage * 100) + " %"),
-        ` der amtlichen Bruttokreditaufnahme ab (${money(t.allotted)} von ${money(v.split.gross)}). `,
-        "Nicht enthalten: Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente, Geldmarktkredite.");
+      return h("div", { class: "coverage" }, L("Teilsumme: Die erfassten Emissionen decken ", "Partial total: the covered issues account for "), h("strong", null, pctNum(v.coverage * 100, nf0)),
+        L(` der amtlichen Bruttokreditaufnahme ab (${money(t.allotted)} von ${money(v.split.gross)}). `, ` of official gross borrowing (${money(t.allotted)} of ${money(v.split.gross)}). `),
+        L("Nicht enthalten: Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente, Geldmarktkredite.", "Not included: sales from own holdings, instruments not sold at auction, money-market loans."));
     }
-    if (v.scope_note) return h("div", { class: "coverage" }, "Abgrenzung: ", v.scope_note);
-    return h("div", { class: "coverage" }, "Teilsumme: nur die erfassten Emissionen. Der Abdeckungsgrad gegenüber der amtlichen Bruttokreditaufnahme steht erst nach Jahresabschluss fest.");
+    if (v.scope_note) return h("div", { class: "coverage" }, L("Abgrenzung: ", "Scope: "), tr(v.scope_note));
+    return h("div", { class: "coverage" }, L("Teilsumme: nur die erfassten Emissionen. Der Abdeckungsgrad gegenüber der amtlichen Bruttokreditaufnahme steht erst nach Jahresabschluss fest.",
+      "Partial total: covered issues only. Coverage relative to official gross borrowing is only known after the year has ended."));
   }
 
   function renderDE(summary, v, intlDE, sources, country) {
-    const meta = COUNTRY_META[country.code];
     const out = [overviewCard(summary, intlDE, country), contextCard(v, summary, country)];
     const t = v.totals;
     const partial = v.year === summary.last_year;
     const tiles = [];
+    const T = (num, de, en, rest) => h("span", null, h("b", null, `${num} · ${L(de, en)}`), rest ? L(rest[0], rest[1]) : null);
     // 1. Neu aufgenommen
     if (t) {
-      tiles.push(tile(h("span", null, h("b", null, "1 · Neu aufgenommen"), " – erfasste Emissionen: zugeteilte Kredite und Anleihen (Nennwert)"), chip("calc"),
+      tiles.push(tile(T(1, "Neu aufgenommen", "New borrowing", [" – erfasste Emissionen: zugeteilte Kredite und Anleihen (Nennwert)", " – covered issues: allotted loans and bonds (nominal)"]), chip("calc"),
         h("div", { class: "value" }, money(t.allotted)),
-        [h("div", { class: "sub" }, "Emissionserlös ", h("strong", null, money(t.proceeds)), ` aus ${v.issues.filter(i => i.cost !== undefined).length} Emissionen`),
-          t.retained ? h("div", { class: "sub" }, "Zusätzlich ", h("strong", null, money(t.retained)), " in den Eigenbestand genommen (nicht verkauft; ", chip("none", "Verkaufserlös unbekannt"), ")") : null,
-          partial ? h("div", { class: "sub" }, `Laufendes Jahr: Emissionen bis ${dateDe(v.data_through)}.`) : null]));
+        [h("div", { class: "sub" }, L("Emissionserlös ", "Issue proceeds "), h("strong", null, money(t.proceeds)), L(` aus ${v.issues.filter(i => i.cost !== undefined).length} Emissionen`, ` from ${v.issues.filter(i => i.cost !== undefined).length} issues`)),
+          t.retained ? h("div", { class: "sub" }, L("Zusätzlich ", "In addition "), h("strong", null, money(t.retained)), L(" in den Eigenbestand genommen (nicht verkauft; ", " taken into own holdings (not sold; "), chip("none", L("Verkaufserlös unbekannt", "sale proceeds unknown")), ")") : null,
+          partial ? h("div", { class: "sub" }, L(`Laufendes Jahr: Emissionen bis ${dateDe(v.data_through)}.`, `Current year: issues up to ${dateDe(v.data_through)}.`)) : null]));
     } else if (v.aggregate && v.aggregate.gross) {
       const ag = v.aggregate;
-      tiles.push(tile(h("span", null, h("b", null, "1 · Neu aufgenommen"), " – Anleihen des Bundes, Brutto-Absatz (Nennwert)"), chip("official", "amtlich: Bundesbank"),
+      tiles.push(tile(T(1, "Neu aufgenommen", "New borrowing", [" – Anleihen des Bundes, Brutto-Absatz (Nennwert)", " – federal bonds, gross sales (nominal)"]), chip("official", L("amtlich: Bundesbank", "official: Bundesbank")),
         h("div", { class: "value" }, money(ag.gross)),
-        [ag.gross_dm ? h("div", { class: "sub" }, "= ", h("strong", null, nf1.format(ag.gross_dm / 1000) + " Mrd. DM"), " (umgerechnet 1,95583 DM/€)") : null,
-          ag.gross_le4 !== null ? h("div", { class: "sub" }, "Laufzeit bis 4 Jahre ", h("strong", null, money(ag.gross_le4)), " · über 4 Jahre ", h("strong", null, money(ag.gross_gt4))) : null,
-          h("div", { class: "sub" }, "Nur Anleihen (Inhaberschuldverschreibungen); Kredite, Schuldscheindarlehen und Geldmarkttitel fehlen. Keine Einzelemissionen ", chip("none", "Kurs, Kupon, Fälligkeit je Emission unbekannt"))]));
+        [ag.gross_dm ? h("div", { class: "sub" }, "= ", h("strong", null, EN() ? `DM ${nf1.format(ag.gross_dm / 1000)} bn` : nf1.format(ag.gross_dm / 1000) + " Mrd. DM"), L(" (umgerechnet 1,95583 DM/€)", " (converted at DM 1.95583/€)")) : null,
+          ag.gross_le4 !== null ? h("div", { class: "sub" }, L("Laufzeit bis 4 Jahre ", "Maturity up to 4 years "), h("strong", null, money(ag.gross_le4)), L(" · über 4 Jahre ", " · over 4 years "), h("strong", null, money(ag.gross_gt4))) : null,
+          h("div", { class: "sub" }, L("Nur Anleihen (Inhaberschuldverschreibungen); Kredite, Schuldscheindarlehen und Geldmarkttitel fehlen. Keine Einzelemissionen ", "Bonds only (bearer bonds); loans, promissory notes and money-market paper are missing. No individual issues "), chip("none", L("Kurs, Kupon, Fälligkeit je Emission unbekannt", "price, coupon, maturity per issue unknown")))]));
     } else {
-      tiles.push(tile(h("span", null, h("b", null, "1 · Neu aufgenommen")), chip("none"), h("div", { class: "value nodata" }, "Keine Einzelemissionsdaten"),
-        [v.split ? h("div", { class: "sub" }, "Amtliche Bruttokreditaufnahme: ", h("strong", null, money(v.split.gross)), " ", chip("official")) : null]));
+      tiles.push(tile(T(1, "Neu aufgenommen", "New borrowing"), chip("none"), h("div", { class: "value nodata" }, L("Keine Einzelemissionsdaten", "No individual issue data")),
+        [v.split ? h("div", { class: "sub" }, L("Amtliche Bruttokreditaufnahme: ", "Official gross borrowing: "), h("strong", null, money(v.split.gross)), " ", chip("official")) : null]));
     }
     // 2. Anschlussfinanzierung / Netto
+    const t2 = ["Anschlussfinanzierung / zusätzliche Nettoverschuldung", "Refinancing / additional net borrowing"];
     if (v.split) {
       const sp = v.split;
       const refShare = sp.gross ? Math.min(1, sp.refinancing / sp.gross) : 0;
-      tiles.push(tile(h("span", null, h("b", null, "2 · Anschlussfinanzierung / zusätzliche Nettoverschuldung")), chip("model", "modelliert: Saldenrechnung"),
-        h("div", { class: "value" }, money(sp.net), h("span", { class: "sub", style: "font-size:.85rem;font-weight:400" }, " netto")),
-        [h("div", { class: "split-bar", role: "img", "aria-label": `Anteil Anschlussfinanzierung ${nf0.format(refShare * 100)} Prozent` },
+      tiles.push(tile(T(2, t2[0], t2[1]), chip("model", L("modelliert: Saldenrechnung", "modelled: balance method")),
+        h("div", { class: "value" }, money(sp.net), h("span", { class: "sub", style: "font-size:.85rem;font-weight:400" }, L(" netto", " net"))),
+        [h("div", { class: "split-bar", role: "img", "aria-label": L(`Anteil Anschlussfinanzierung ${nf0.format(refShare * 100)} Prozent`, `Refinancing share ${nf0.format(refShare * 100)} percent`) },
           h("span", { style: `width:${refShare * 100}%;background:var(--series-1-soft)` }), h("span", { style: `width:${(1 - refShare) * 100}%;background:var(--series-1)` })),
-          h("div", { class: "sub" }, "Tilgungen (Anschlussfinanzierung) ", h("strong", null, money(sp.refinancing)), " · Brutto ", h("strong", null, money(sp.gross)), " ", sp.source === "auctions" ? chip("calc", "aus Auktionsdaten summiert") : chip("official", sp.source === "bundesbank" ? "amtlich: Bundesbank" : null)),
-          sp.source === "auctions" ? h("div", { class: "sub" }, "Brutto = alle Auktionen des Jahres (kurzlaufende Bills werden mehrfach im Jahr erneuert); Tilgungen = Fälligkeiten erfasster Emissionen", sp.scope && sp.scope.includes("unvollständig") ? " – unvollständig, da vor 1979 begebene Papiere fehlen." : ".") : null,
-          sp.cost_net !== undefined ? h("div", { class: "sub" }, "Zinslast rechnerisch auf zusätzliche Verschuldung: ", h("strong", null, money(sp.cost_net)), ` (${nf0.format(sp.share_net * 100)} % proportional)`) : null,
-          sp.cost_net_model ? h("div", { class: "sub" }, "Zinslast rechnerisch auf zusätzliche Verschuldung (modelliert): ", h("strong", null, `${money(sp.cost_net_model[0])} – ${money(sp.cost_net_model[2])}`)) : null,
-          sp.source === "bundesbank" ? h("div", { class: "sub" }, "Nur Anleihen des Bundes; netto = Veränderung des Umlaufs laut Bundesbank, Tilgung = Brutto − netto. Umstellungen der Statistik (z. B. 1957, 1990) können Sprünge verursachen.") : null,
-          !sp.complete_year ? h("div", { class: "sub" }, `Amtliche Werte bis ${dateDe(sp.as_of)}.`) : null]));
+          h("div", { class: "sub" }, L("Tilgungen (Anschlussfinanzierung) ", "Redemptions (refinancing) "), h("strong", null, money(sp.refinancing)), L(" · Brutto ", " · gross "), h("strong", null, money(sp.gross)), " ",
+            sp.source === "auctions" ? chip("calc", L("aus Auktionsdaten summiert", "summed from auction data")) : chip("official", sp.source === "bundesbank" ? L("amtlich: Bundesbank", "official: Bundesbank") : null)),
+          sp.source === "auctions" ? h("div", { class: "sub" }, L("Brutto = alle Auktionen des Jahres (kurzlaufende Bills werden mehrfach im Jahr erneuert); Tilgungen = Fälligkeiten erfasster Emissionen", "Gross = all auctions of the year (short-term bills are rolled over several times a year); redemptions = maturities of covered issues"),
+            sp.scope && sp.scope.includes("unvollständig") ? L(" – unvollständig, da vor 1979 begebene Papiere fehlen.", " – incomplete, as securities issued before 1979 are missing.") : ".") : null,
+          sp.cost_net !== undefined ? h("div", { class: "sub" }, L("Zinslast rechnerisch auf zusätzliche Verschuldung: ", "Interest burden attributable to additional borrowing: "), h("strong", null, money(sp.cost_net)), L(` (${nf0.format(sp.share_net * 100)} % proportional)`, ` (${nf0.format(sp.share_net * 100)}% proportional)`)) : null,
+          sp.cost_net_model ? h("div", { class: "sub" }, L("Zinslast rechnerisch auf zusätzliche Verschuldung (modelliert): ", "Interest burden attributable to additional borrowing (modelled): "), h("strong", null, `${money(sp.cost_net_model[0])} – ${money(sp.cost_net_model[2])}`)) : null,
+          sp.source === "bundesbank" ? h("div", { class: "sub" }, L("Nur Anleihen des Bundes; netto = Veränderung des Umlaufs laut Bundesbank, Tilgung = Brutto − netto. Umstellungen der Statistik (z. B. 1957, 1990) können Sprünge verursachen.",
+            "Federal bonds only; net = change in amount outstanding according to the Bundesbank, redemption = gross − net. Statistical changes (e.g. 1957, 1990) can cause jumps.")) : null,
+          !sp.complete_year ? h("div", { class: "sub" }, L(`Amtliche Werte bis ${dateDe(sp.as_of)}.`, `Official values up to ${dateDe(sp.as_of)}.`)) : null]));
     } else {
-      tiles.push(tile(h("span", null, h("b", null, "2 · Anschlussfinanzierung / zusätzliche Nettoverschuldung")), chip("none"), h("div", { class: "value nodata" }, "Keine amtlichen Brutto-/Tilgungsdaten"), []));
+      tiles.push(tile(T(2, t2[0], t2[1]), chip("none"), h("div", { class: "value nodata" }, L("Keine amtlichen Brutto-/Tilgungsdaten", "No official gross/redemption data")), []));
     }
     // 3. Kosten bis Fälligkeit
     if (t) {
       const band = t.cost_low !== t.cost_high;
-      tiles.push(tile(h("span", null, h("b", null, "3 · Finanzierungskosten der erfassten Emissionen"), " – bis Fälligkeit"), chip(band ? "mixed" : "calc"),
+      tiles.push(tile(T(3, "Finanzierungskosten der erfassten Emissionen", "Financing cost of covered issues", [" – bis Fälligkeit", " – until maturity"]), chip(band ? "mixed" : "calc"),
         h("div", { class: "value" }, money(t.cost)),
-        [coverageLine(v), band ? h("div", { class: "sub" }, "davon fest ", h("strong", null, money(t.cost_fixed)), "; gesamt ", h("strong", null, money(t.cost_low) + " bis " + money(t.cost_high)), " ", chip("proj", v.country === "US" ? "Projektion Inflation/Geldmarktzins" : "Projektion 0–4 % Inflation")) : null,
-          h("div", { class: "sub" }, "Ø Rendite ", h("strong", null, pct(t.avg_yield)), " · Ø Laufzeit ", h("strong", null, nf1.format(t.avg_term) + " J.")),
-          t.cost < 0 ? h("div", { class: "sub" }, "Negativ: Anleihen wurden über dem Rückzahlungsbetrag verkauft (negative Renditen).") : null]));
+        [coverageLine(v), band ? h("div", { class: "sub" }, L("davon fest ", "of which fixed "), h("strong", null, money(t.cost_fixed)), L("; gesamt ", "; total "), h("strong", null, money(t.cost_low) + L(" bis ", " to ") + money(t.cost_high)), " ",
+          chip("proj", v.country === "US" ? L("Projektion Inflation/Geldmarktzins", "projection inflation/money-market rate") : L("Projektion 0–4 % Inflation", "projection 0–4% inflation"))) : null,
+          h("div", { class: "sub" }, L("Ø Rendite ", "Avg. yield "), h("strong", null, pct(t.avg_yield)), L(" · Ø Laufzeit ", " · avg. term "), h("strong", null, yrs(t.avg_term))),
+          t.cost < 0 ? h("div", { class: "sub" }, L("Negativ: Anleihen wurden über dem Rückzahlungsbetrag verkauft (negative Renditen).", "Negative: bonds were sold above their redemption amount (negative yields).")) : null]));
     } else if (v.aggregate && v.aggregate.model) {
       const m = v.aggregate.model, terms = summary.model_terms;
-      tiles.push(tile(h("span", null, h("b", null, "3 · Finanzierungskosten der erfassten Anleihen"), " – Größenordnung bis Fälligkeit"), chip("model", "modelliert, grobe Spanne"),
+      const bt = summary.model_backtest;
+      tiles.push(tile(T(3, "Finanzierungskosten der erfassten Anleihen", "Financing cost of covered bonds", [" – Größenordnung bis Fälligkeit", " – order of magnitude until maturity"]), chip("model", L("modelliert, grobe Spanne", "modelled, rough range")),
         h("div", { class: "value" }, `${money(m.low)} – ${money(m.high)}`),
-        [h("div", { class: "sub" }, "Mittelwert ", h("strong", null, money(m.mid)), " · Ø Emissionsrendite ", h("strong", null, pct(v.aggregate.em_yield))),
-          h("div", { class: "sub" }, `Modell: Brutto-Absatz × Emissionsrendite des Monats × Laufzeit (bis 4 J.: ${nf1.format(terms.short[0])}/${nf1.format(terms.short[1])}/${nf1.format(terms.short[2])} J.; über 4 J.: ${nf0.format(terms.long[0])}/${nf0.format(terms.long[1])}/${nf0.format(terms.long[2])} J.), Ausgabe zu pari.`),
-          m.volume_fallback_yield ? h("div", { class: "sub" }, `Für ${money(m.volume_fallback_yield)} ohne veröffentlichte Emissionsrendite wurde die Umlaufsrendite des Monats verwendet.`) : null,
-          summary.model_backtest && summary.model_backtest.normal_years ? h("div", { class: "sub" }, `Rückrechnung ${summary.model_backtest.normal_years[0]}–${summary.model_backtest.normal_years[1]}: exakter Wert in ${summary.model_backtest.normal_in_band} von ${summary.model_backtest.normal_n} Jahren in der Spanne, Mittelwert meist zu hoch. `, h("a", { href: "#/pruefung" }, "Details")) : null]));
+        [h("div", { class: "sub" }, L("Mittelwert ", "Midpoint "), h("strong", null, money(m.mid)), L(" · Ø Emissionsrendite ", " · avg. issue yield "), h("strong", null, pct(v.aggregate.em_yield))),
+          h("div", { class: "sub" }, L(`Modell: Brutto-Absatz × Emissionsrendite des Monats × Laufzeit (bis 4 J.: ${nf1.format(terms.short[0])}/${nf1.format(terms.short[1])}/${nf1.format(terms.short[2])} J.; über 4 J.: ${nf0.format(terms.long[0])}/${nf0.format(terms.long[1])}/${nf0.format(terms.long[2])} J.), Ausgabe zu pari.`,
+            `Model: gross sales × issue yield of the month × term (up to 4 yrs: ${nf1.format(terms.short[0])}/${nf1.format(terms.short[1])}/${nf1.format(terms.short[2])} yrs; over 4 yrs: ${nf0.format(terms.long[0])}/${nf0.format(terms.long[1])}/${nf0.format(terms.long[2])} yrs), issued at par.`)),
+          m.volume_fallback_yield ? h("div", { class: "sub" }, L(`Für ${money(m.volume_fallback_yield)} ohne veröffentlichte Emissionsrendite wurde die Umlaufsrendite des Monats verwendet.`, `For ${money(m.volume_fallback_yield)} without a published issue yield, the outstanding yield of the month was used.`)) : null,
+          bt && bt.normal_years ? h("div", { class: "sub" }, L(`Rückrechnung ${bt.normal_years[0]}–${bt.normal_years[1]}: exakter Wert in ${bt.normal_in_band} von ${bt.normal_n} Jahren in der Spanne, Mittelwert meist zu hoch. `,
+            `Back-test ${bt.normal_years[0]}–${bt.normal_years[1]}: exact value within the range in ${bt.normal_in_band} of ${bt.normal_n} years, midpoint usually too high. `), h("a", { href: "#/pruefung" }, L("Details", "Details"))) : null]));
     } else {
-      tiles.push(tile(h("span", null, h("b", null, "3 · Finanzierungskosten bis Fälligkeit")), chip("none"), h("div", { class: "value nodata" }, "Keine ausreichenden Daten"),
-        [h("div", { class: "sub" }, v.aggregate && v.aggregate.gross ? "Für diese Jahre veröffentlicht die Bundesbank keine Emissionsrendite; ohne Zinssatz lässt sich keine Zinslast abschätzen." : "Aus Schuldenstand oder Zinssumme lässt sich ein Jahrgang nicht rekonstruieren.")]));
+      tiles.push(tile(T(3, "Finanzierungskosten bis Fälligkeit", "Financing cost until maturity"), chip("none"), h("div", { class: "value nodata" }, L("Keine ausreichenden Daten", "Insufficient data")),
+        [h("div", { class: "sub" }, v.aggregate && v.aggregate.gross ? L("Für diese Jahre veröffentlicht die Bundesbank keine Emissionsrendite; ohne Zinssatz lässt sich keine Zinslast abschätzen.", "The Bundesbank publishes no issue yield for these years; without an interest rate no interest burden can be estimated.")
+          : L("Aus Schuldenstand oder Zinssumme lässt sich ein Jahrgang nicht rekonstruieren.", "A vintage cannot be reconstructed from debt levels or interest totals."))]));
     }
     // 5. Tatsächlich gezahlt
     const p = v.paid;
+    const t5 = ["Im Jahr tatsächlich gezahlte Zinsen", "Interest actually paid in the year"];
     if (p.status === "official") {
-      tiles.push(tile(h("span", null, h("b", null, "5 · Im Jahr tatsächlich gezahlte Zinsen"), " – auf alte und neue Schulden (Vergleichszahl)"), chip("official"),
+      tiles.push(tile(T(5, t5[0], t5[1], [" – auf alte und neue Schulden (Vergleichszahl)", " – on old and new debt (comparison figure)"]), chip("official"),
         h("div", { class: "value" }, money(p.cash)),
-        [p.labels ? h("div", { class: "sub" }, p.labels.cash) : null,
-          p.total !== p.cash ? h("div", { class: "sub" }, p.labels ? p.labels.total + ": " : "inkl. periodengerechter Verteilung von Agio/Disagio: ", h("strong", null, money(p.total))) : null,
-          !p.complete_year ? h("div", { class: "sub" }, `Stand ${/^\d{4}-\d{2}-\d{2}$/.test(p.as_of) ? dateDe(p.as_of) : p.as_of} (Jahr unvollständig).`) : null,
-          p.wb !== undefined ? h("div", { class: "sub" }, "Weltbank, Zentralstaat: ", h("strong", null, money(p.wb)), " ", chip("intl")) : null]));
+        [p.labels ? h("div", { class: "sub" }, tr(p.labels.cash)) : null,
+          p.total !== p.cash ? h("div", { class: "sub" }, p.labels ? tr(p.labels.total) + ": " : L("inkl. periodengerechter Verteilung von Agio/Disagio: ", "incl. accrual-based distribution of premium/discount: "), h("strong", null, money(p.total))) : null,
+          !p.complete_year ? h("div", { class: "sub" }, L("Stand ", "As of "), /^\d{4}-\d{2}-\d{2}$/.test(p.as_of) ? dateDe(p.as_of) : String(p.as_of).replace("Monate", L("Monate", "months")), L(" (Jahr unvollständig).", " (year incomplete).")) : null,
+          p.wb !== undefined ? h("div", { class: "sub" }, L("Weltbank, Zentralstaat: ", "World Bank, central government: "), h("strong", null, money(p.wb)), " ", chip("intl")) : null]));
     } else if (p.status === "intl") {
-      tiles.push(tile(h("span", null, h("b", null, "5 · Im Jahr tatsächlich gezahlte Zinsen")), chip("intl"),
-        h("div", { class: "value" }, money(p.wb)), [h("div", { class: "sub" }, "Weltbank, Zinsausgaben Zentralstaat (abweichende Abgrenzung", country.code === "DE" ? "; historische DM-Werte in Euro umgerechnet laut Weltbank" : "", ").")]));
+      tiles.push(tile(T(5, t5[0], t5[1]), chip("intl"),
+        h("div", { class: "value" }, money(p.wb)), [h("div", { class: "sub" }, L("Weltbank, Zinsausgaben Zentralstaat (abweichende Abgrenzung", "World Bank, central government interest payments (different definition"),
+          country.code === "DE" ? L("; historische DM-Werte in Euro umgerechnet laut Weltbank", "; historical DM values converted to euro by the World Bank") : "", ").")]));
     } else {
-      tiles.push(tile(h("span", null, h("b", null, "5 · Im Jahr tatsächlich gezahlte Zinsen")), chip("none"), h("div", { class: "value nodata" }, "Keine ausreichenden Daten"), []));
+      tiles.push(tile(T(5, t5[0], t5[1]), chip("none"), h("div", { class: "value nodata" }, L("Keine ausreichenden Daten", "Insufficient data")), []));
     }
     out.push(h("div", { class: "tiles" }, tiles));
     out.push(h("div", { class: "tiles" }, comparisonTile(v), generalGovTile(v, country)));
@@ -514,47 +595,55 @@
 
   function comparisonTile(v) {
     const t = v.totals;
+    const head = rest => h("span", null, h("b", null, L("Vergleichsmaßstab", "Comparison measure")), rest);
     if (!t || t.cost_per_100 === undefined) {
-      return tile(h("span", null, h("b", null, "Vergleichsmaßstab"), " – Kosten je 100 Einheiten Emissionserlös"), chip("none"),
-        h("div", { class: "value nodata" }, "Keine ausreichenden Daten"), [h("div", { class: "sub" }, "Nur mit Einzelemissionen berechenbar.")]);
+      return tile(head(L(" – Kosten je 100 Einheiten Emissionserlös", " – cost per 100 units of issue proceeds")), chip("none"),
+        h("div", { class: "value nodata" }, L("Keine ausreichenden Daten", "Insufficient data")), [h("div", { class: "sub" }, L("Nur mit Einzelemissionen berechenbar.", "Can only be calculated from individual issues."))]);
     }
-    return tile(h("span", null, h("b", null, "Vergleichsmaßstab"), " – je 100 Einheiten Emissionserlös"), chip(t.cost_low !== t.cost_high ? "mixed" : "calc"),
-      h("div", { class: "value" }, nf2.format(t.cost_per_100), h("span", { class: "sub", style: "font-size:.85rem;font-weight:400" }, " über die gesamte Laufzeit")),
-      [h("div", { class: "sub" }, "Ø Laufzeit ", h("strong", null, nf1.format(t.avg_term) + " Jahre"), " → je Laufzeitjahr ", h("strong", null, nf2.format(t.cost_per_100_year))),
-        h("div", { class: "sub" }, "Ø Emissionsrendite ", h("strong", null, pct(t.avg_yield))),
-        h("div", { class: "sub" }, "Lange Kredite können insgesamt mehr Zinsen kosten und trotzdem günstigere jährliche Konditionen haben – deshalb Laufzeit und Jahreswert immer mitlesen.")]);
+    return tile(head(L(" – je 100 Einheiten Emissionserlös", " – per 100 units of issue proceeds")), chip(t.cost_low !== t.cost_high ? "mixed" : "calc"),
+      h("div", { class: "value" }, nf2.format(t.cost_per_100), h("span", { class: "sub", style: "font-size:.85rem;font-weight:400" }, L(" über die gesamte Laufzeit", " over the full term"))),
+      [h("div", { class: "sub" }, L("Ø Laufzeit ", "Avg. term "), h("strong", null, nf1.format(t.avg_term) + L(" Jahre", " years")), L(" → je Laufzeitjahr ", " → per year of term "), h("strong", null, nf2.format(t.cost_per_100_year))),
+        h("div", { class: "sub" }, L("Ø Emissionsrendite ", "Avg. issue yield "), h("strong", null, pct(t.avg_yield))),
+        h("div", { class: "sub" }, L("Lange Kredite können insgesamt mehr Zinsen kosten und trotzdem günstigere jährliche Konditionen haben – deshalb Laufzeit und Jahreswert immer mitlesen.",
+          "Long-term borrowing can cost more interest in total and still have cheaper annual terms – so always read the term and the annual value alongside."))]);
   }
 
   function generalGovTile(v, country) {
     const g = v.general_gov || {};
     const w = g.weo;
     const subs = [];
-    if (w && w.debt !== undefined) subs.push(h("div", { class: "sub" }, "Bruttoschulden des Gesamtstaats: ", h("strong", null, nf1.format(w.debt) + " % des BIP")));
-    if (g.vgr_interest !== undefined && g.vgr_interest !== null) subs.push(h("div", { class: "sub" }, "Zinsausgaben des Staates (VGR, amtlich): ", h("strong", null, money(g.vgr_interest)), " ", chip("official")));
-    subs.push(h("div", { class: "sub" }, "Gesamtstaat = Zentralstaat + Länder/Bundesstaaten + Gemeinden (+ Sozialversicherung). Die Jahrgangsberechnung oben betrifft nur den Zentralstaat."));
-    if (w && w.projection) subs.push(h("div", { class: "sub" }, chip("proj", "IWF-Projektion"), " Wert liegt nach dem letzten Ist-Jahr des IWF."));
-    return tile(h("span", null, h("b", null, "Gesamtstaat"), " – Nettozinsen im Jahr (IWF, abgeleitet)"), chip("intl"),
-      w && w.net_interest !== undefined ? h("div", { class: "value" }, nf2.format(w.net_interest) + " % des BIP") : h("div", { class: "value nodata" }, "Keine Daten"),
+    const ofGdp = L(" % des BIP", "% of GDP");
+    if (w && w.debt !== undefined) subs.push(h("div", { class: "sub" }, L("Bruttoschulden des Gesamtstaats: ", "Gross general government debt: "), h("strong", null, nf1.format(w.debt) + ofGdp)));
+    if (g.vgr_interest !== undefined && g.vgr_interest !== null) subs.push(h("div", { class: "sub" }, L("Zinsausgaben des Staates (VGR, amtlich): ", "General government interest expenditure (national accounts, official): "), h("strong", null, money(g.vgr_interest)), " ", chip("official")));
+    subs.push(h("div", { class: "sub" }, L("Gesamtstaat = Zentralstaat + Länder/Bundesstaaten + Gemeinden (+ Sozialversicherung). Die Jahrgangsberechnung oben betrifft nur den Zentralstaat.",
+      "General government = central government + states + municipalities (+ social security). The vintage calculation above covers central government only.")));
+    if (w && w.projection) subs.push(h("div", { class: "sub" }, chip("proj", L("IWF-Projektion", "IMF projection")), L(" Wert liegt nach dem letzten Ist-Jahr des IWF.", " Value lies after the IMF's last actual year.")));
+    return tile(h("span", null, h("b", null, L("Gesamtstaat", "General government")), L(" – Nettozinsen im Jahr (IWF, abgeleitet)", " – net interest in the year (IMF, derived)")), chip("intl"),
+      w && w.net_interest !== undefined ? h("div", { class: "value" }, nf2.format(w.net_interest) + ofGdp) : h("div", { class: "value nodata" }, L("Keine Daten", "No data")),
       subs);
   }
 
   function mainChartCard(v, summary) {
     const card = h("section", { class: "card chart-card", "aria-labelledby": "main-h" },
-      h("h2", { id: "main-h" }, "Welche Zinslast wurde in diesem Jahr für die Zukunft eingegangen?"));
+      h("h2", { id: "main-h" }, L("Welche Zinslast wurde in diesem Jahr für die Zukunft eingegangen?", "What interest burden was committed for the future in this year?")));
     const t = v.totals;
     if (!t && v.aggregate && v.aggregate.model) {
       const m = v.aggregate.model;
-      card.append(h("p", null, chip("model"), ` Grobe Größenordnung für ${v.year}: `, h("strong", null, `${money(m.low)} bis ${money(m.high)}`), ` (Mittelwert ${money(m.mid)}).`),
-        h("p", { class: "muted" }, "Eine Aufteilung nach Zahlungsjahren ist nicht möglich, weil Kupon, Ausgabekurs und Fälligkeit der einzelnen Anleihen in den verwendeten Quellen fehlen. ",
-          "Die Spanne entsteht aus Annahmen über die Laufzeit; sie ist keine Berechnung aus Einzelemissionen und nicht mit den Werten ab 1999 gleichwertig."));
+      card.append(h("p", null, chip("model"), L(` Grobe Größenordnung für ${v.year}: `, ` Rough order of magnitude for ${v.year}: `), h("strong", null, `${money(m.low)} ${L("bis", "to")} ${money(m.high)}`), L(` (Mittelwert ${money(m.mid)}).`, ` (midpoint ${money(m.mid)}).`)),
+        h("p", { class: "muted" }, L("Eine Aufteilung nach Zahlungsjahren ist nicht möglich, weil Kupon, Ausgabekurs und Fälligkeit der einzelnen Anleihen in den verwendeten Quellen fehlen. ",
+          "A breakdown by payment year is not possible because coupon, issue price and maturity of individual bonds are missing from the sources used. "),
+          L("Die Spanne entsteht aus Annahmen über die Laufzeit; sie ist keine Berechnung aus Einzelemissionen und nicht mit den Werten ab 1999 gleichwertig.",
+            "The range results from assumptions about the term; it is not calculated from individual issues and is not equivalent to the values from 1999.")));
       return card;
     }
     if (!t) {
-      card.append(h("p", null, chip("none"), " Für ", String(v.year), " liegen keine Einzelemissionen vor. Die Zinslast dieses Jahrgangs wird deshalb nicht berechnet und nicht geschätzt."),
-        h("p", { class: "muted" }, v.country === "US" ? "Die Auktionsdaten von FiscalData beginnen 1979; ältere Einzelemissionen sind nicht maschinenlesbar erschlossen." :
-          v.year < 1949 ? "In diesem Jahr gab es noch keinen Bund als Schuldner." :
-          v.aggregate && v.aggregate.gross ? "Die Bundesbank weist für dieses Jahr zwar das begebene Volumen aus, aber keine Emissionsrendite (erst ab 1960)." :
-          "Die Emissionshistorie der Finanzagentur beginnt 1999. Für frühere Jahre müssten Emissionsdaten der Bundesschuldenverwaltung bzw. Bundesbank erschlossen werden."));
+      card.append(h("p", null, chip("none"), L(` Für ${v.year} liegen keine Einzelemissionen vor. Die Zinslast dieses Jahrgangs wird deshalb nicht berechnet und nicht geschätzt.`,
+        ` There are no individual issues for ${v.year}. The interest burden of this vintage is therefore neither calculated nor estimated.`)),
+        h("p", { class: "muted" }, v.country === "US" ? L("Die Auktionsdaten von FiscalData beginnen 1979; ältere Einzelemissionen sind nicht maschinenlesbar erschlossen.", "FiscalData auction data begin in 1979; older individual issues are not available in machine-readable form.") :
+          v.year < 1949 ? L("In diesem Jahr gab es noch keinen Bund als Schuldner.", "In this year there was no federal government as a debtor yet.") :
+          v.aggregate && v.aggregate.gross ? L("Die Bundesbank weist für dieses Jahr zwar das begebene Volumen aus, aber keine Emissionsrendite (erst ab 1960).", "The Bundesbank reports the volume issued for this year, but no issue yield (only from 1960).") :
+          L("Die Emissionshistorie der Finanzagentur beginnt 1999. Für frühere Jahre müssten Emissionsdaten der Bundesschuldenverwaltung bzw. Bundesbank erschlossen werden.",
+            "The Finance Agency's issuance history begins in 1999. Earlier years would require issuance data from the former Federal Debt Administration or the Bundesbank.")));
       return card;
     }
     const years = Object.keys(v.flows).map(Number).sort((a, b) => a - b);
@@ -568,31 +657,36 @@
     const whiskerHi = cats.map((y, i) => (Math.abs(get(y, 1)) + Math.abs(get(y, 3)) > 0.05 ? Math.max(0, fixed[i]) + get(y, 3) : null));
     const band = t.cost_low !== t.cost_high;
     card.append(h("p", { class: "chart-sub" },
-      `Die ${v.year} erfassten Emissionen kosten bis zur letzten Fälligkeit ${last} insgesamt `, h("strong", null, money(t.cost)),
-      band ? ` (Spanne ${money(t.cost_low)} bis ${money(t.cost_high)}, davon fest ${money(t.cost_fixed)})` : "",
-      ". Dargestellt ist die Zinslast je Zahlungsjahr – ohne Tilgung, ohne spätere Anschlussfinanzierung.",
-      v.coverage !== null && v.coverage !== undefined ? ` Das ist eine Teilsumme: Die erfassten Emissionen decken ${nf0.format(v.coverage * 100)} % der amtlichen Bruttokreditaufnahme ab.`
-        : v.scope_note ? " Erfasst sind alle marktfähigen Wertpapiere aus Auktionen, nicht die gesamte Staatsverschuldung." : " Das ist eine Teilsumme der Kreditaufnahme dieses Jahres."));
+      L(`Die ${v.year} erfassten Emissionen kosten bis zur letzten Fälligkeit ${last} insgesamt `, `The issues covered in ${v.year} cost a total of `), h("strong", null, money(t.cost)),
+      EN() ? ` until the last maturity in ${last}` : "",
+      band ? L(` (Spanne ${money(t.cost_low)} bis ${money(t.cost_high)}, davon fest ${money(t.cost_fixed)})`, ` (range ${money(t.cost_low)} to ${money(t.cost_high)}, of which fixed ${money(t.cost_fixed)})`) : "",
+      L(". Dargestellt ist die Zinslast je Zahlungsjahr – ohne Tilgung, ohne spätere Anschlussfinanzierung.", ". Shown is the interest burden per payment year – excluding redemption and later refinancing."),
+      v.coverage !== null && v.coverage !== undefined ? L(` Das ist eine Teilsumme: Die erfassten Emissionen decken ${nf0.format(v.coverage * 100)} % der amtlichen Bruttokreditaufnahme ab.`, ` This is a partial total: the covered issues account for ${nf0.format(v.coverage * 100)}% of official gross borrowing.`)
+        : v.scope_note ? L(" Erfasst sind alle marktfähigen Wertpapiere aus Auktionen, nicht die gesamte Staatsverschuldung.", " Covers all marketable securities from auctions, not total government debt.")
+        : L(" Das ist eine Teilsumme der Kreditaufnahme dieses Jahres.", " This is a partial total of this year's borrowing.")));
     card.append(h("div", { class: "legend" },
-      h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), "feststehend (Kupons, Disagio/Agio, erhaltene Stückzinsen) ", chip("calc")),
-      hasProj ? h("span", null, h("span", { class: "key proj" }), v.country === "US" ? "abhängig von Inflation (TIPS) bzw. Geldmarktzins (FRN) – mittleres Szenario; Linie = Spanne der Szenarien " : "abhängig von Inflation – mittleres Szenario 2 %; Linie = Spanne 0 % bis 4 % ", chip("proj")) : null));
+      h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L("feststehend (Kupons, Disagio/Agio, erhaltene Stückzinsen) ", "fixed (coupons, discount/premium, accrued interest received) "), chip("calc")),
+      hasProj ? h("span", null, h("span", { class: "key proj" }), v.country === "US"
+        ? L("abhängig von Inflation (TIPS) bzw. Geldmarktzins (FRN) – mittleres Szenario; Linie = Spanne der Szenarien ", "depends on inflation (TIPS) or money-market rate (FRN) – mid scenario; line = range of scenarios ")
+        : L("abhängig von Inflation – mittleres Szenario 2 %; Linie = Spanne 0 % bis 4 % ", "depends on inflation – mid scenario 2%; line = range 0% to 4% "), chip("proj")) : null));
     const box = h("div", { class: "chart" });
     card.append(box);
     queueMicrotask(() => cleanups.push(barChart(box, {
       cats, stacks: [{ key: "fixed", color: "var(--series-1)", values: fixed }].concat(hasProj ? [{ key: "proj", pattern: true, values: projMid }] : []),
       whisker: hasProj ? { lo: whiskerLo, hi: whiskerHi } : null,
-      ariaLabel: `Zinslast des Jahrgangs ${v.year} nach Zahlungsjahr`,
+      ariaLabel: L(`Zinslast des Jahrgangs ${v.year} nach Zahlungsjahr`, `Interest burden of vintage ${v.year} by payment year`),
       tooltip: i => {
         const y = cats[i];
-        const rows = [{ color: "var(--series-1)", value: money(fixed[i]), label: "feststehend" }];
-        if (hasProj && whiskerLo[i] !== null) rows.push({ color: "var(--series-2)", value: money(projMid[i]), label: `Projektion (2 %), Spanne ${money(get(y, 1))} – ${money(get(y, 3))}` });
-        return { head: `Zahlungsjahr ${y}`, rows, note: fixed[i] < 0 ? "Negativ: erhaltene Stückzinsen oder Agio (Verkauf über pari)." : null };
+        const rows = [{ color: "var(--series-1)", value: money(fixed[i]), label: L("feststehend", "fixed") }];
+        if (hasProj && whiskerLo[i] !== null) rows.push({ color: "var(--series-2)", value: money(projMid[i]), label: L(`Projektion (mittel), Spanne ${money(get(y, 1))} – ${money(get(y, 3))}`, `projection (mid), range ${money(get(y, 1))} – ${money(get(y, 3))}`) });
+        return { head: L(`Zahlungsjahr ${y}`, `Payment year ${y}`), rows, note: fixed[i] < 0 ? L("Negativ: erhaltene Stückzinsen oder Agio (Verkauf über pari).", "Negative: accrued interest received or premium (sale above par).") : null };
       },
     })));
     card.append(h("p", { class: "muted", style: "font-size:.85rem;margin-top:.5rem" },
-      "Disagio/Agio erscheint im Fälligkeitsjahr, weil erst dann der volle Nennwert zurückgezahlt wird; vom Käufer gezahlte Stückzinsen mindern die Kosten im Emissionsjahr. ",
-      summary.ilb_last_official ? `Inflationsindexierte Zahlungen bis ${dateDe(summary.ilb_last_official)} mit amtlichen Index-Verhältniszahlen, danach Projektion.` : ""));
-    card.append(tableView("Als Tabelle anzeigen", [{ t: "Zahlungsjahr" }, { t: "feststehend", r: 1 }, { t: "Projektion 0 %", r: 1 }, { t: "Projektion 2 %", r: 1 }, { t: "Projektion 4 %", r: 1 }, { t: "Summe (2 %)", r: 1 }],
+      L("Disagio/Agio erscheint im Fälligkeitsjahr, weil erst dann der volle Nennwert zurückgezahlt wird; vom Käufer gezahlte Stückzinsen mindern die Kosten im Emissionsjahr. ",
+        "Discount/premium appears in the year of maturity, when the full nominal is repaid; accrued interest paid by the buyer reduces the cost in the year of issue. "),
+      summary.ilb_last_official ? L(`Inflationsindexierte Zahlungen bis ${dateDe(summary.ilb_last_official)} mit amtlichen Index-Verhältniszahlen, danach Projektion.`, `Inflation-linked payments up to ${dateDe(summary.ilb_last_official)} use official index ratios, projection thereafter.`) : ""));
+    card.append(tableView(asTable(), [{ t: L("Zahlungsjahr", "Payment year") }, { t: L("feststehend", "fixed"), r: 1 }, { t: L("Projektion tief", "projection low"), r: 1 }, { t: L("Projektion mittel", "projection mid"), r: 1 }, { t: L("Projektion hoch", "projection high"), r: 1 }, { t: L("Summe (mittel)", "total (mid)"), r: 1 }],
       cats.map(y => [String(y), money(get(y, 0)), money(get(y, 1)), money(get(y, 2)), money(get(y, 3)), money(get(y, 0) + get(y, 2))])));
     return card;
   }
@@ -604,46 +698,51 @@
     const vals = cats.map(y => v.maturities[y] || 0);
     const total = vals.reduce((a, b) => a + b, 0);
     const box = h("div", { class: "chart" });
+    const perPp = L("je 1 %-Pkt. Anschlusszins p. a.", "per 1 pp refinancing rate p.a.");
     const card = h("section", { class: "card chart-card", "aria-labelledby": "refi-h" },
-      h("h2", { id: "refi-h" }, "Getrennt davon: Risiko der Anschlussfinanzierung"),
-      h("p", { class: "chart-sub" }, "Bei Fälligkeit muss der Rückzahlungsbetrag neu finanziert werden, sofern er nicht aus Überschüssen getilgt wird. Die Kosten dieser Anschlussfinanzierung stehen heute nicht fest und sind ",
-        h("strong", null, "nicht"), " in der Zinslast oben enthalten. ",
-        `Jeder Prozentpunkt Zins auf die Anschlussfinanzierung kostet ${money(total * 0.01)} pro Jahr, solange die Anschlusskredite laufen.`),
-      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1-soft);border:1px solid var(--series-1)" }), "fälliger Rückzahlungsbetrag (inflationsindexiert: mittleres Szenario)")),
+      h("h2", { id: "refi-h" }, L("Getrennt davon: Risiko der Anschlussfinanzierung", "Shown separately: refinancing risk")),
+      h("p", { class: "chart-sub" }, L("Bei Fälligkeit muss der Rückzahlungsbetrag neu finanziert werden, sofern er nicht aus Überschüssen getilgt wird. Die Kosten dieser Anschlussfinanzierung stehen heute nicht fest und sind ",
+        "At maturity the redemption amount has to be refinanced unless it is repaid from surpluses. The cost of this refinancing is not known today and is "),
+        h("strong", null, L("nicht", "not")), L(" in der Zinslast oben enthalten. ", " included in the interest burden above. "),
+        L(`Jeder Prozentpunkt Zins auf die Anschlussfinanzierung kostet ${money(total * 0.01)} pro Jahr, solange die Anschlusskredite laufen.`, `Each percentage point of interest on the refinancing costs ${money(total * 0.01)} per year for as long as the refinancing runs.`)),
+      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1-soft);border:1px solid var(--series-1)" }), L("fälliger Rückzahlungsbetrag (inflationsindexiert: mittleres Szenario)", "redemption amount due (inflation-linked: mid scenario)"))),
       box,
-      tableView("Als Tabelle anzeigen", [{ t: "Jahr" }, { t: "fällig", r: 1 }, { t: "je 1 %-Pkt. Anschlusszins p. a.", r: 1 }],
+      tableView(asTable(), [{ t: L("Jahr", "Year") }, { t: L("fällig", "due"), r: 1 }, { t: perPp, r: 1 }],
         cats.filter((y, i) => vals[i]).map(y => [String(y), money(v.maturities[y]), money(v.maturities[y] * 0.01)])));
     queueMicrotask(() => cleanups.push(barChart(box, {
       cats, stacks: [{ key: "mat", color: "var(--series-1-soft)", values: vals }], height: 180,
-      ariaLabel: "Fällige Beträge des Jahrgangs nach Jahr",
-      tooltip: i => ({ head: `Fällig ${cats[i]}`, rows: [{ color: "var(--series-1)", value: money(vals[i]), label: "Rückzahlung" }, { value: money(vals[i] * 0.01), label: "je 1 %-Pkt. Anschlusszins p. a." }] }),
+      ariaLabel: L("Fällige Beträge des Jahrgangs nach Jahr", "Amounts of the vintage due by year"),
+      tooltip: i => ({ head: L(`Fällig ${cats[i]}`, `Due ${cats[i]}`), rows: [{ color: "var(--series-1)", value: money(vals[i]), label: L("Rückzahlung", "redemption") }, { value: money(vals[i] * 0.01), label: perPp }] }),
     })));
     return card;
   }
 
+  const instLabel = (sources, k) => (EN() && I18N.instruments[k]) || sources.instrument_labels[k] || k;
+  const methodLabel = (sources, k) => (EN() && I18N.methods[k]) || sources.method_labels[k] || k;
+
   function breakdownCard(v, sources, country) {
-    const meta = COUNTRY_META[country.code];
-    const labels = sources.instrument_labels;
+    const meta = cmeta(country.code);
     const inst = Object.entries(v.by_instrument).sort((a, b) => b[1].allotted - a[1].allotted);
     const govRows = v.governments.filter(g => g.n);
+    const costH = L("Kosten bis Fälligkeit", "Cost until maturity");
     return h("section", { class: "card", "aria-labelledby": "bd-h" },
-      h("h2", { id: "bd-h" }, "Aufschlüsselung"),
+      h("h2", { id: "bd-h" }, L("Aufschlüsselung", "Breakdown")),
       h("div", { class: "two-col" },
-        h("div", null, h("h3", null, "Nach Wertpapierart"), h("div", { class: "table-scroll" }, h("table", null,
-          h("thead", null, h("tr", null, h("th", null, "Art"), h("th", { class: "r" }, "Anzahl"), h("th", { class: "r" }, "zugeteilt"), h("th", { class: "r" }, "Kosten bis Fälligkeit"))),
-          h("tbody", null, inst.map(([k, x]) => h("tr", null, h("td", null, labels[k] || k), h("td", { class: "r" }, String(x.n)), h("td", { class: "r" }, money(x.allotted)),
+        h("div", null, h("h3", null, L("Nach Wertpapierart", "By type of security")), h("div", { class: "table-scroll" }, h("table", null,
+          h("thead", null, h("tr", null, h("th", null, L("Art", "Type")), h("th", { class: "r" }, L("Anzahl", "Number")), h("th", { class: "r" }, L("zugeteilt", "allotted")), h("th", { class: "r" }, costH))),
+          h("tbody", null, inst.map(([k, x]) => h("tr", null, h("td", null, instLabel(sources, k)), h("td", { class: "r" }, String(x.n)), h("td", { class: "r" }, money(x.allotted)),
             h("td", { class: "r" }, money(x.cost), x.cost_low !== x.cost_high ? h("div", { class: "muted" }, `${money(x.cost_low)} – ${money(x.cost_high)}`) : null))))))),
-        h("div", null, h("h3", null, `Nach ${meta.govLabel} (Emissionstag)`), h("div", { class: "table-scroll" }, h("table", null,
-          h("thead", null, h("tr", null, h("th", null, "Regierung"), h("th", { class: "r" }, "zugeteilt"), h("th", { class: "r" }, "Kosten bis Fälligkeit"))),
-          h("tbody", null, govRows.map(g => h("tr", null, h("td", null, g.head, h("div", { class: "muted" }, g.parties)), h("td", { class: "r" }, money(g.allotted)),
+        h("div", null, h("h3", null, L(`Nach ${meta.govLabel} (Emissionstag)`, `By ${meta.govLabel} (issue date)`)), h("div", { class: "table-scroll" }, h("table", null,
+          h("thead", null, h("tr", null, h("th", null, L("Regierung", "Government")), h("th", { class: "r" }, L("zugeteilt", "allotted")), h("th", { class: "r" }, costH))),
+          h("tbody", null, govRows.map(g => h("tr", null, h("td", null, g.head, h("div", { class: "muted" }, tr(g.parties))), h("td", { class: "r" }, money(g.allotted)),
             h("td", { class: "r" }, money(g.cost), g.cost_low !== g.cost_high ? h("div", { class: "muted" }, `${money(g.cost_low)} – ${money(g.cost_high)}`) : null)))))),
-          h("p", { class: "muted", style: "font-size:.8rem" }, "Vereinfachte zeitliche Zuordnung nach Emissionstag; Kreditermächtigungen erteilt das Parlament. ", h("a", { href: `#/regierungen/${country.code}` }, "Alle Regierungen mit Zinsniveau und übernommenen Fälligkeiten")))));
+          h("p", { class: "muted", style: "font-size:.8rem" }, L("Vereinfachte zeitliche Zuordnung nach Emissionstag; Kreditermächtigungen erteilt das Parlament. ", "Simplified temporal assignment by issue date; borrowing authority is granted by parliament. "),
+            h("a", { href: `#/regierungen/${country.code}` }, L("Alle Regierungen mit Zinsniveau und übernommenen Fälligkeiten", "All governments with interest-rate level and inherited maturities"))))));
   }
 
   function issuesCard(v, sources, country) {
-    const labels = sources.instrument_labels, methods = sources.method_labels;
     const kinds = Array.from(new Set(v.issues.map(i => i.instrument)));
-    const sel = h("select", { id: "instFilter" }, h("option", { value: "" }, "alle Wertpapierarten"), kinds.map(k => h("option", { value: k }, labels[k] || k)));
+    const sel = h("select", { id: "instFilter" }, h("option", { value: "" }, L("alle Wertpapierarten", "all types")), kinds.map(k => h("option", { value: k }, instLabel(sources, k))));
     const tbody = h("tbody");
     const LIMIT = 25;
     let showAll = false;
@@ -653,65 +752,67 @@
       const f = sel.value;
       const rows = [];
       const list = v.issues.filter(i => !f || i.instrument === f);
-      more.textContent = showAll ? "Weniger anzeigen" : `Alle ${list.length} Emissionen anzeigen`;
+      more.textContent = showAll ? L("Weniger anzeigen", "Show fewer") : L(`Alle ${list.length} Emissionen anzeigen`, `Show all ${list.length} issues`);
       more.hidden = list.length <= LIMIT;
       for (const i of (showAll ? list : list.slice(0, LIMIT))) {
-        const name = `${i.instrument}${i.coupon ? " " + nf2.format(i.coupon * 100) + " %" : ""} ${dateDe(i.maturity)}`;
-        const st = i.status === "proj" ? chip("proj", "berechnet + Projektion") : chip(i.status, i.status === "calc" ? "berechnet" : null);
-        const tr = h("tr", { class: "issue", tabindex: 0, "aria-expanded": "false" },
+        const name = `${i.instrument}${i.coupon ? " " + pctNum(i.coupon * 100) : ""} ${dateDe(i.maturity)}`;
+        const st = i.status === "proj" ? chip("proj", L("berechnet + Projektion", "calculated + projection")) : chip(i.status, i.status === "calc" ? L("berechnet", "calculated") : null);
+        const tr_ = h("tr", { class: "issue", tabindex: 0, "aria-expanded": "false" },
           h("td", { class: "num" }, dateDe(i.date)),
-          h("td", null, name, h("div", { class: "muted" }, i.isin + " · " + (methods[i.method] || i.method))),
-          h("td", { class: "r" }, i.cost !== undefined ? money(i.allotted) : "–", i.retained ? h("div", { class: "muted" }, "+" + money(i.retained) + " EB") : null),
-          h("td", { class: "r hide-sm" }, i.price !== null ? String(i.price).replace(".", ",") : "–"),
+          h("td", null, name, h("div", { class: "muted" }, i.isin + " · " + methodLabel(sources, i.method))),
+          h("td", { class: "r" }, i.cost !== undefined ? money(i.allotted) : "–", i.retained ? h("div", { class: "muted" }, "+" + money(i.retained) + L(" EB", " OH")) : null),
+          h("td", { class: "r hide-sm" }, i.price !== null ? (EN() ? String(i.price) : String(i.price).replace(".", ",")) : "–"),
           h("td", { class: "r hide-sm" }, i.yield_pub !== null ? pct(i.yield_pub, i.kind === "zero" ? 3 : 2) : "–"),
           h("td", { class: "r" }, i.cost !== undefined ? money(i.cost) : "–", i.cost !== undefined && i.cost_low !== i.cost_high ? h("div", { class: "muted" }, `${money(i.cost_low)} – ${money(i.cost_high)}`) : null),
           h("td", null, st));
         let detail = null;
         const toggle = () => {
-          if (detail) { detail.remove(); detail = null; tr.setAttribute("aria-expanded", "false"); return; }
-          detail = h("tr", { class: "detail" }, h("td", { colspan: 7 }, issueDetail(i, labels, methods, country)));
-          tr.after(detail); tr.setAttribute("aria-expanded", "true");
+          if (detail) { detail.remove(); detail = null; tr_.setAttribute("aria-expanded", "false"); return; }
+          detail = h("tr", { class: "detail" }, h("td", { colspan: 7 }, issueDetail(i, sources, country)));
+          tr_.after(detail); tr_.setAttribute("aria-expanded", "true");
         };
-        tr.addEventListener("click", toggle);
-        tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-        rows.push(tr);
+        tr_.addEventListener("click", toggle);
+        tr_.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+        rows.push(tr_);
       }
       tbody.replaceChildren(...rows);
     };
     sel.addEventListener("change", () => { showAll = false; fill(); });
     fill();
     return h("section", { class: "card", "aria-labelledby": "is-h" },
-      h("h2", { id: "is-h" }, `Einzelemissionen ${v.year} (${v.issues.length})`),
-      h("p", { class: "muted" }, "Zeile antippen für Zahlungsstrom, Annahmen und Quellzeile. EB = Marktpflegequote/Eigenbestand, nicht an Investoren verkauft."),
-      h("div", { class: "controls" }, h("label", { for: "instFilter" }, "Filter", sel)),
+      h("h2", { id: "is-h" }, L(`Einzelemissionen ${v.year} (${v.issues.length})`, `Individual issues ${v.year} (${v.issues.length})`)),
+      h("p", { class: "muted" }, L("Zeile antippen für Zahlungsstrom, Annahmen und Quellzeile. EB = Marktpflegequote/Eigenbestand, nicht an Investoren verkauft.",
+        "Tap a row for cash flows, assumptions and source row. OH = retention/own holdings, not sold to investors.")),
+      h("div", { class: "controls" }, h("label", { for: "instFilter" }, L("Filter", "Filter"), sel)),
       h("div", { class: "table-scroll" }, h("table", null,
-        h("thead", null, h("tr", null, h("th", null, "Auktion"), h("th", null, "Wertpapier"), h("th", { class: "r" }, "zugeteilt"), h("th", { class: "r hide-sm" }, "Kurs"),
-          h("th", { class: "r hide-sm" }, "Rendite"), h("th", { class: "r" }, "Kosten bis Fälligkeit"), h("th", null, "Status"))), tbody)), more);
+        h("thead", null, h("tr", null, h("th", null, L("Auktion", "Auction")), h("th", null, L("Wertpapier", "Security")), h("th", { class: "r" }, L("zugeteilt", "allotted")), h("th", { class: "r hide-sm" }, L("Kurs", "Price")),
+          h("th", { class: "r hide-sm" }, L("Rendite", "Yield")), h("th", { class: "r" }, L("Kosten bis Fälligkeit", "Cost until maturity")), h("th", null, L("Status", "Status")))), tbody)), more);
   }
 
-  function issueDetail(i, labels, methods, country) {
+  function issueDetail(i, sources, country) {
     const kv = (k, val) => [h("dt", null, k), h("dd", null, val)];
+    const cashKind = { "Emissionserlös": L("Emissionserlös", "Issue proceeds"), "Kupon": L("Kupon", "Coupon"), "Rückzahlung": L("Rückzahlung", "Redemption") };
     const parts = [h("dl", { class: "kv" },
-      kv("Wertpapier", `${labels[i.instrument] || i.instrument}, ISIN ${i.isin}`),
-      kv("Verfahren", `${methods[i.method] || i.method}${i.new ? " (Neuemission)" : " (Aufstockung)"}`),
-      kv("Auktion / Valuta", `${dateDe(i.date)} / ${dateDe(i.settle)} (${i.settle_rule === "T+2" ? "Annahme T+2 Geschäftstage" : i.settle_rule})`),
-      kv("Emissionsvolumen", `${money(i.issue_volume)}, davon zugeteilt ${money(i.allotted)}, Eigenbestand ${money(i.retained)}`),
-      i.kind !== "zero" ? kv("Zinslaufbeginn", `${dateDe(i.interest_start)} (${i.interest_start_source || "–"})`) : null,
-      i.first_coupon_basis ? kv("Erster Kupon", `${i.first_coupon} – ${i.first_coupon_basis}`) : null,
-      kv("Kurs / Rendite", `${i.price ?? "–"} % / veröffentlicht ${i.yield_pub ?? "–"} %, nachgerechnet ${i.yield_calc ?? "–"} %`),
-      i.proceeds !== undefined ? kv("Emissionserlös", `${money(i.proceeds)} (Kurswert ${money(i.clean_proceeds)} + Stückzinsen ${money(i.accrued)})`) : null,
-      i.cost !== undefined ? kv("Kosten bis Fälligkeit", `${money(i.cost)}${i.cost_low !== i.cost_high ? ` (Spanne ${money(i.cost_low)} – ${money(i.cost_high)}, fest ${money(i.cost_fixed)})` : ""}`) : null,
-      kv(country.code === "DE" ? "Regierung / BMF" : "Regierung", i.fm ? `${i.gov || "–"} / ${i.fm}` : (i.gov || "–")),
-      i.price_source ? kv("Kursquelle", i.price_source) : null,
-      i.soma ? kv("davon Federal Reserve (SOMA)", money(i.soma)) : null,
-      kv("Quelle", `${COUNTRY_META[country.code].sourceRow} ${i.row}`))];
-    if (i.note) parts.push(h("p", { class: "note" }, i.note));
+      kv(L("Wertpapier", "Security"), `${instLabel(sources, i.instrument)}, ${country.code === "US" ? "CUSIP" : "ISIN"} ${i.isin}`),
+      kv(L("Verfahren", "Method"), `${methodLabel(sources, i.method)}${i.new ? L(" (Neuemission)", " (new issue)") : L(" (Aufstockung)", " (reopening)")}`),
+      kv(L("Auktion / Valuta", "Auction / settlement"), `${dateDe(i.date)} / ${dateDe(i.settle)} (${i.settle_rule === "T+2" ? L("Annahme T+2 Geschäftstage", "assumption T+2 business days") : tr(i.settle_rule)})`),
+      kv(L("Emissionsvolumen", "Issue volume"), L(`${money(i.issue_volume)}, davon zugeteilt ${money(i.allotted)}, Eigenbestand ${money(i.retained)}`, `${money(i.issue_volume)}, of which allotted ${money(i.allotted)}, own holdings ${money(i.retained)}`)),
+      i.kind !== "zero" ? kv(L("Zinslaufbeginn", "Interest start"), `${dateDe(i.interest_start)} (${tr(i.interest_start_source) || "–"})`) : null,
+      i.first_coupon_basis ? kv(L("Erster Kupon", "First coupon"), `${tr(i.first_coupon)} – ${tr(i.first_coupon_basis)}`) : null,
+      kv(L("Kurs / Rendite", "Price / yield"), L(`${i.price ?? "–"} % / veröffentlicht ${i.yield_pub ?? "–"} %, nachgerechnet ${i.yield_calc ?? "–"} %`, `${i.price ?? "–"}% / published ${i.yield_pub ?? "–"}%, recalculated ${i.yield_calc ?? "–"}%`)),
+      i.proceeds !== undefined ? kv(L("Emissionserlös", "Issue proceeds"), L(`${money(i.proceeds)} (Kurswert ${money(i.clean_proceeds)} + Stückzinsen ${money(i.accrued)})`, `${money(i.proceeds)} (price value ${money(i.clean_proceeds)} + accrued interest ${money(i.accrued)})`)) : null,
+      i.cost !== undefined ? kv(L("Kosten bis Fälligkeit", "Cost until maturity"), `${money(i.cost)}${i.cost_low !== i.cost_high ? L(` (Spanne ${money(i.cost_low)} – ${money(i.cost_high)}, fest ${money(i.cost_fixed)})`, ` (range ${money(i.cost_low)} – ${money(i.cost_high)}, fixed ${money(i.cost_fixed)})`) : ""}`) : null,
+      kv(country.code === "DE" ? L("Regierung / BMF", "Government / finance minister") : L("Regierung", "Government"), i.fm ? `${i.gov || "–"} / ${i.fm}` : (i.gov || "–")),
+      i.price_source ? kv(L("Kursquelle", "Price source"), tr(i.price_source)) : null,
+      i.soma ? kv(L("davon Federal Reserve (SOMA)", "of which Federal Reserve (SOMA)"), money(i.soma)) : null,
+      kv(L("Quelle", "Source"), `${cmeta(country.code).sourceRow} ${i.row}`))];
+    if (i.note) parts.push(h("p", { class: "note" }, tr(i.note)));
     if (i.cash) {
-      parts.push(h("h3", { style: "margin-top:.5rem" }, "Zahlungsstrom aus Sicht des Bundes"),
-        h("div", { class: "flowlist num" }, i.cash.map(([d, k, val]) => h("div", null, `${dateDe(d)} · ${k}: `, h("strong", null, money(val))))));
+      parts.push(h("h3", { style: "margin-top:.5rem" }, L("Zahlungsstrom aus Sicht des Staates", "Cash flows from the government's perspective")),
+        h("div", { class: "flowlist num" }, i.cash.map(([d, k, val]) => h("div", null, `${dateDe(d)} · ${cashKind[k] || k}: `, h("strong", null, money(val))))));
       const comp = i.components || {};
-      const names = { coupon: "Kupons", accrued: "erhaltene Stückzinsen", discount: "Disagio (+) / Agio (−)", indexation: "Inflationsausgleich Kapital (2 %)" };
-      parts.push(h("p", { class: "muted" }, "Kostenkomponenten: ", Object.entries(comp).map(([k, val]) => `${names[k] || k} ${money(val)}`).join(" · ")));
+      const names = { coupon: L("Kupons", "coupons"), accrued: L("erhaltene Stückzinsen", "accrued interest received"), discount: L("Disagio (+) / Agio (−)", "discount (+) / premium (−)"), indexation: L("Inflationsausgleich Kapital (mittel)", "inflation uplift on capital (mid)") };
+      parts.push(h("p", { class: "muted" }, L("Kostenkomponenten: ", "Cost components: "), Object.entries(comp).map(([k, val]) => `${names[k] || k} ${money(val)}`).join(" · ")));
     }
     return h("div", null, parts);
   }
@@ -719,32 +820,35 @@
   function gapsCard(v, summary, country) {
     const items = [];
     if (v.totals) {
-      if (v.totals.retained) items.push(`Eigenbestand/Marktpflegequote: ${money(v.totals.retained)} Nennwert wurden bei Emission nicht verkauft. Spätere Verkäufe im Sekundärmarkt und deren Kurse sind in den Emissionsdaten nicht enthalten – keine ausreichenden Daten.`);
-      if (v.coverage !== null && v.coverage !== undefined) items.push(`Abdeckung: Die zugeteilten Emissionen entsprechen ${nf0.format(v.coverage * 100)} % der amtlichen Bruttokreditaufnahme. Der Rest entfällt u. a. auf Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente (z. B. Bundesschatzbriefe und Finanzierungsschätze bis 2012, Schuldscheindarlehen, Daueremissionen) und Geldmarktkredite.`);
-      if (country.code === "DE") items.push("Zins- und Währungsswaps des Bundes sind nicht berücksichtigt.");
-      if (v.issues.some(i => i.kind === "fixed_fx")) items.push("US-Dollar-Anleihen: modelliert zum Euro-Gegenwert der Emissionshistorie.");
-      if (v.scope_note) items.push(v.scope_note);
+      if (v.totals.retained) items.push(L(`Eigenbestand/Marktpflegequote: ${money(v.totals.retained)} Nennwert wurden bei Emission nicht verkauft. Spätere Verkäufe im Sekundärmarkt und deren Kurse sind in den Emissionsdaten nicht enthalten – keine ausreichenden Daten.`,
+        `Own holdings/retention: ${money(v.totals.retained)} nominal was not sold at issuance. Later sales in the secondary market and their prices are not included in the issuance data – insufficient data.`));
+      if (v.coverage !== null && v.coverage !== undefined) items.push(L(`Abdeckung: Die zugeteilten Emissionen entsprechen ${nf0.format(v.coverage * 100)} % der amtlichen Bruttokreditaufnahme. Der Rest entfällt u. a. auf Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente (z. B. Bundesschatzbriefe und Finanzierungsschätze bis 2012, Schuldscheindarlehen, Daueremissionen) und Geldmarktkredite.`,
+        `Coverage: the allotted issues correspond to ${nf0.format(v.coverage * 100)}% of official gross borrowing. The rest consists of sales from own holdings, instruments not sold at auction (e.g. federal savings bonds and financing notes until 2012, promissory notes, tap issues) and money-market loans.`));
+      if (country.code === "DE") items.push(L("Zins- und Währungsswaps des Bundes sind nicht berücksichtigt.", "Interest-rate and currency swaps of the federal government are not taken into account."));
+      if (v.issues.some(i => i.kind === "fixed_fx")) items.push(L("US-Dollar-Anleihen: modelliert zum Euro-Gegenwert der Emissionshistorie.", "US-dollar bonds: modelled at the euro equivalent stated in the issuance history."));
+      if (v.scope_note) items.push(tr(v.scope_note));
       if (country.code === "US") {
-        items.push("Kurzlaufende Bills werden mehrfach im Jahr erneuert; das zugeteilte Volumen eines Jahres ist deshalb viel größer als die Neuverschuldung.");
-        if (v.issues.some(i => i.soma)) items.push(`Enthalten sind Zuteilungen an die Federal Reserve (SOMA) von ${money(v.issues.reduce((a, i) => a + (i.soma || 0), 0))}: Die Notenbank ersetzt fällige Bestände; auch das ist Anschlussfinanzierung.`);
-        if (v.issues.some(i => i.status === "model")) items.push("TIPS: Index-Verhältniszahlen vor Mai 2008 durch Interpolation zwischen amtlichen Referenz-CPI-Werten der Emissionstage (modelliert).");
-        if (v.issues.some(i => i.kind === "frn")) items.push("FRN: Kupon aus der Rendite der 13-Wochen-Bill (aus denselben Auktionsdaten) plus festem Aufschlag; künftiger Index als Projektion (letzter Wert ±2 %-Punkte).");
-        if (v.split && v.split.scope && v.split.scope.includes("unvollständig")) items.push("Tilgungen vor 2010 unvollständig: Fälligkeiten von vor 1979 begebenen Papieren fehlen in den Auktionsdaten.");
+        items.push(L("Kurzlaufende Bills werden mehrfach im Jahr erneuert; das zugeteilte Volumen eines Jahres ist deshalb viel größer als die Neuverschuldung.", "Short-term bills are rolled over several times a year; the volume allotted in a year is therefore much larger than new borrowing."));
+        if (v.issues.some(i => i.soma)) items.push(L(`Enthalten sind Zuteilungen an die Federal Reserve (SOMA) von ${money(v.issues.reduce((a, i) => a + (i.soma || 0), 0))}: Die Notenbank ersetzt fällige Bestände; auch das ist Anschlussfinanzierung.`,
+          `Includes allotments to the Federal Reserve (SOMA) of ${money(v.issues.reduce((a, i) => a + (i.soma || 0), 0))}: the central bank replaces maturing holdings; this is refinancing too.`));
+        if (v.issues.some(i => i.status === "model")) items.push(L("TIPS: Index-Verhältniszahlen vor Mai 2008 durch Interpolation zwischen amtlichen Referenz-CPI-Werten der Emissionstage (modelliert).", "TIPS: index ratios before May 2008 by interpolation between official reference CPI values on issue dates (modelled)."));
+        if (v.issues.some(i => i.kind === "frn")) items.push(L("FRN: Kupon aus der Rendite der 13-Wochen-Bill (aus denselben Auktionsdaten) plus festem Aufschlag; künftiger Index als Projektion (letzter Wert ±2 %-Punkte).", "FRN: coupon from the 13-week bill yield (from the same auction data) plus a fixed spread; future index as projection (last value ±2 percentage points)."));
+        if (v.split && v.split.scope && v.split.scope.includes("unvollständig")) items.push(L("Tilgungen vor 2010 unvollständig: Fälligkeiten von vor 1979 begebenen Papieren fehlen in den Auktionsdaten.", "Redemptions before 2010 incomplete: maturities of securities issued before 1979 are missing from the auction data."));
       }
     } else if (v.aggregate && v.aggregate.model) {
-      items.push("Keine Einzelemissionen: Zinslast nur als modellierte Spanne aus Bundesbank-Aggregaten (Brutto-Absatz, Emissionsrendite) mit Laufzeitannahmen; keine Aufteilung nach Zahlungsjahren.");
-      items.push("Erfasst sind nur Anleihen des Bundes. Kredite, Schuldscheindarlehen, Ausgleichsforderungen und Geldmarkttitel fehlen.");
-      items.push("Beträge von D-Mark in Euro umgerechnet (1,95583 DM/€), nicht inflationsbereinigt.");
+      items.push(L("Keine Einzelemissionen: Zinslast nur als modellierte Spanne aus Bundesbank-Aggregaten (Brutto-Absatz, Emissionsrendite) mit Laufzeitannahmen; keine Aufteilung nach Zahlungsjahren.", "No individual issues: interest burden only as a modelled range from Bundesbank aggregates (gross sales, issue yield) with term assumptions; no breakdown by payment year."));
+      items.push(L("Erfasst sind nur Anleihen des Bundes. Kredite, Schuldscheindarlehen, Ausgleichsforderungen und Geldmarkttitel fehlen.", "Only federal bonds are covered. Loans, promissory notes, equalisation claims and money-market paper are missing."));
+      items.push(L("Beträge von D-Mark in Euro umgerechnet (1,95583 DM/€), nicht inflationsbereinigt.", "Amounts converted from Deutsche Mark to euro (DM 1.95583/€), not adjusted for inflation."));
     } else {
-      items.push("Für dieses Jahr liegen in den geprüften Quellen keine Einzelemissionen und keine Emissionsrenditen vor; Jahrgangskosten werden weder berechnet noch geschätzt.");
+      items.push(L("Für dieses Jahr liegen in den geprüften Quellen keine Einzelemissionen und keine Emissionsrenditen vor; Jahrgangskosten werden weder berechnet noch geschätzt.", "For this year the sources checked contain neither individual issues nor issue yields; vintage costs are neither calculated nor estimated."));
     }
-    if (!v.split && country.code === "DE") items.push("Amtliche Bruttokreditaufnahme und Tilgungen: Schuldenbericht ab 1995, Anleihen des Bundes laut Bundesbank ab 1948.");
-    if (v.paid.status === "intl") items.push("Gezahlte Zinsen stammen aus der Weltbank-Datenbank (Zentralstaat) und sind nicht direkt mit den amtlichen Werten späterer Jahre vergleichbar.");
-    items.push("Gesamtstaat (IWF): Nettozinsen = Primärsaldo − Finanzierungssaldo; abgeleitete Größe, nicht mit den Jahrgangskosten des Zentralstaats vergleichbar.");
+    if (!v.split && country.code === "DE") items.push(L("Amtliche Bruttokreditaufnahme und Tilgungen: Schuldenbericht ab 1995, Anleihen des Bundes laut Bundesbank ab 1948.", "Official gross borrowing and redemptions: debt report from 1995, federal bonds according to the Bundesbank from 1948."));
+    if (v.paid.status === "intl") items.push(L("Gezahlte Zinsen stammen aus der Weltbank-Datenbank (Zentralstaat) und sind nicht direkt mit den amtlichen Werten späterer Jahre vergleichbar.", "Interest paid comes from the World Bank database (central government) and is not directly comparable with the official values of later years."));
+    items.push(L("Gesamtstaat (IWF): Nettozinsen = Primärsaldo − Finanzierungssaldo; abgeleitete Größe, nicht mit den Jahrgangskosten des Zentralstaats vergleichbar.", "General government (IMF): net interest = primary balance − overall balance; a derived figure, not comparable with central government vintage costs."));
     return h("section", { class: "card", "aria-labelledby": "gap-h" },
-      h("h2", { id: "gap-h" }, "Datenlücken und Annahmen für " + v.year),
+      h("h2", { id: "gap-h" }, L("Datenlücken und Annahmen für ", "Data gaps and assumptions for ") + v.year),
       h("ul", { class: "gaps" }, items.map(x => h("li", null, x))),
-      h("p", { class: "muted" }, "Alle Quellen mit Abrufdatum: ", h("a", { href: "#/quellen" }, "Quellenansicht"), " · Rechenweg mit Beispiel: ", h("a", { href: "#/methode" }, "Methode")));
+      h("p", { class: "muted" }, L("Alle Quellen mit Abrufdatum: ", "All sources with retrieval date: "), h("a", { href: "#/quellen" }, L("Quellenansicht", "Sources")), L(" · Rechenweg mit Beispiel: ", " · Calculation with example: "), h("a", { href: "#/methode" }, L("Methode", "Methodology"))));
   }
 
   function renderIntlOnly(country, series, countries) {
@@ -753,55 +857,59 @@
     const wb = series.wb_interest, weo = series.weo || {}, wm = series.weo_meta || {};
     const val = wb[state.year];
     const w = weo[state.year];
+    const name = countryName(country);
     const out = [];
     out.push(h("section", { class: "card" },
-      h("p", null, chip("none"), ` Für ${country.name} sind keine Einzelemissionen importiert. `,
-        "Kreditjahrgänge, Aufteilung in Anschlussfinanzierung und Nettoverschuldung sowie Finanzierungskosten bis Fälligkeit werden deshalb nicht angezeigt – auch nicht geschätzt. ",
-        "Aus gesamten Zinszahlungen lässt sich die Finanzierungslast eines bestimmten Kreditjahrgangs nicht eindeutig rekonstruieren."),
+      h("p", null, chip("none"), L(` Für ${name} sind keine Einzelemissionen importiert. `, ` No individual issues are imported for ${name}. `),
+        L("Kreditjahrgänge, Aufteilung in Anschlussfinanzierung und Nettoverschuldung sowie Finanzierungskosten bis Fälligkeit werden deshalb nicht angezeigt – auch nicht geschätzt. ",
+          "Borrowing vintages, the split into refinancing and net borrowing and financing costs until maturity are therefore not shown – not even as estimates. "),
+        L("Aus gesamten Zinszahlungen lässt sich die Finanzierungslast eines bestimmten Kreditjahrgangs nicht eindeutig rekonstruieren.", "The financing burden of a particular borrowing vintage cannot be reconstructed unambiguously from total interest payments.")),
       h("dl", { class: "context" },
-        h("div", null, h("dt", null, "Zentralstaat"), h("dd", null, `Weltbank (Zinszahlungen, Mio. ${country.currency}, nominal)`)),
-        h("div", null, h("dt", null, "Gesamtstaat laut IWF"), h("dd", null, wm.composition || "–")),
-        h("div", null, h("dt", null, "Haushaltsjahr (IWF)"), h("dd", null, wm.fiscal_year || "–")),
-        h("div", null, h("dt", null, "Letztes Ist-Jahr (IWF)"), h("dd", null, wm.latest_actual_label || "–")))));
-    const nd = (n, lbl) => tile(h("span", null, h("b", null, n), " " + lbl), chip("none"), h("div", { class: "value nodata" }, "Keine ausreichenden Daten"), []);
+        h("div", null, h("dt", null, L("Zentralstaat", "Central government")), h("dd", null, L(`Weltbank (Zinszahlungen, Mio. ${country.currency}, nominal)`, `World Bank (interest payments, ${country.currency} m, nominal)`))),
+        h("div", null, h("dt", null, L("Gesamtstaat laut IWF", "General government according to the IMF")), h("dd", null, wm.composition || "–")),
+        h("div", null, h("dt", null, L("Haushaltsjahr (IWF)", "Fiscal year (IMF)")), h("dd", null, wm.fiscal_year || "–")),
+        h("div", null, h("dt", null, L("Letztes Ist-Jahr (IWF)", "Last actual year (IMF)")), h("dd", null, wm.latest_actual_label || "–")))));
+    const nd = (n, de, en) => tile(h("span", null, h("b", null, n), " " + L(de, en)), chip("none"), h("div", { class: "value nodata" }, L("Keine ausreichenden Daten", "Insufficient data")), []);
     out.push(h("div", { class: "tiles" },
-      nd("1 ·", "Neu aufgenommen"), nd("2 ·", "Anschlussfinanzierung / Nettoverschuldung"), nd("3 ·", "Finanzierungskosten bis Fälligkeit"),
+      nd("1 ·", "Neu aufgenommen", "New borrowing"), nd("2 ·", "Anschlussfinanzierung / Nettoverschuldung", "Refinancing / net borrowing"), nd("3 ·", "Finanzierungskosten bis Fälligkeit", "Financing cost until maturity"),
       val !== undefined
-        ? tile(h("span", null, h("b", null, "5 · Im Jahr gezahlte Zinsen"), " – Zentralstaat"), chip("intl"), h("div", { class: "value" }, money(val, country.currency)),
-          [h("div", { class: "sub" }, "Weltbank, nominal in Landeswährung (heutige Denomination).")])
-        : nd("5 ·", "Im Jahr gezahlte Zinsen – Zentralstaat"),
+        ? tile(h("span", null, h("b", null, L("5 · Im Jahr gezahlte Zinsen", "5 · Interest paid in the year")), L(" – Zentralstaat", " – central government")), chip("intl"), h("div", { class: "value" }, money(val, country.currency)),
+          [h("div", { class: "sub" }, L("Weltbank, nominal in Landeswährung (heutige Denomination).", "World Bank, nominal in local currency (current denomination)."))])
+        : nd("5 ·", "Im Jahr gezahlte Zinsen – Zentralstaat", "Interest paid in the year – central government"),
       generalGovTile({ general_gov: w ? { weo: w } : null }, country)));
-    // Gesamtstaat: Nettozinsen in % des BIP (vergleichbar über Länder)
     const box2 = h("div", { class: "chart" });
     const ni = years.map(y => (weo[y] && weo[y].net_interest !== undefined ? weo[y].net_interest : null));
-    out.push(h("section", { class: "card chart-card" }, h("h2", null, "Gesamtstaat: Nettozinsen in % des BIP"),
-      h("p", { class: "chart-sub" }, "IWF World Economic Outlook, abgeleitet als Primärsaldo − Finanzierungssaldo. In % des BIP über Länder vergleichbar. Werte nach dem letzten Ist-Jahr sind IWF-Projektionen (schraffiert)."),
-      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), "Ist-Werte"),
-        h("span", null, h("span", { class: "key", style: "background-image:repeating-linear-gradient(135deg,var(--series-1) 0 2px,transparent 2px 5px);border:1px solid var(--series-1)" }), "IWF-Projektion")),
+    const ofGdp = L(" % des BIP", "% of GDP");
+    out.push(h("section", { class: "card chart-card" }, h("h2", null, L("Gesamtstaat: Nettozinsen in % des BIP", "General government: net interest in % of GDP")),
+      h("p", { class: "chart-sub" }, L("IWF World Economic Outlook, abgeleitet als Primärsaldo − Finanzierungssaldo. In % des BIP über Länder vergleichbar. Werte nach dem letzten Ist-Jahr sind IWF-Projektionen (schraffiert).",
+        "IMF World Economic Outlook, derived as primary balance − overall balance. Comparable across countries as % of GDP. Values after the last actual year are IMF projections (hatched).")),
+      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L("Ist-Werte", "Actual values")),
+        h("span", null, h("span", { class: "key", style: "background-image:repeating-linear-gradient(135deg,var(--series-1) 0 2px,transparent 2px 5px);border:1px solid var(--series-1)" }), L("IWF-Projektion", "IMF projection"))),
       box2));
     queueMicrotask(() => cleanups.push(barChart(box2, {
       cats: years,
       stacks: [{ color: "var(--series-1)", values: years.map((y, i) => (ni[i] !== null && !weo[y].projection ? ni[i] : 0)) },
         { pattern: "model", values: years.map((y, i) => (ni[i] !== null && weo[y].projection ? ni[i] : 0)) }],
-      gaps: ni.map(x => x === null), selected: years.indexOf(state.year), height: 200, xEvery: 10, focusable: false, gapLabel: "keine Daten",
-      yFormat: t => nf1.format(t) + " %",
-      tooltip: i => ({ head: String(years[i]), rows: [ni[i] !== null ? { color: "var(--series-1)", value: nf2.format(ni[i]) + " % des BIP", label: weo[years[i]].projection ? "Nettozinsen Gesamtstaat (IWF-Projektion)" : "Nettozinsen Gesamtstaat (IWF)" } : { value: "keine Daten", label: "" }] }),
+      gaps: ni.map(x => x === null), selected: years.indexOf(state.year), height: 200, xEvery: 10, focusable: false, gapLabel: L("keine Daten", "no data"),
+      yFormat: t => pctNum(t, nf1),
+      tooltip: i => ({ head: String(years[i]), rows: [ni[i] !== null ? { color: "var(--series-1)", value: nf2.format(ni[i]) + ofGdp, label: weo[years[i]].projection ? L("Nettozinsen Gesamtstaat (IWF-Projektion)", "general government net interest (IMF projection)") : L("Nettozinsen Gesamtstaat (IWF)", "general government net interest (IMF)") } : { value: L("keine Daten", "no data"), label: "" }] }),
       onClick: i => { location.hash = `#/${country.code}/${years[i]}`; },
     })));
     const box = h("div", { class: "chart" });
-    out.push(h("section", { class: "card chart-card" }, h("h2", null, "Zentralstaat: gezahlte Zinsen (Vergleichszahl)"),
-      h("p", { class: "chart-sub" }, "Weltbank, Zinsausgaben des Zentralstaats in " + country.currency + ", nominal. Schraffiert: keine Daten. Nicht über Länder vergleichbar (Währung, Inflation) und keine Grundlage für Jahrgangskosten."),
+    out.push(h("section", { class: "card chart-card" }, h("h2", null, L("Zentralstaat: gezahlte Zinsen (Vergleichszahl)", "Central government: interest paid (comparison figure)")),
+      h("p", { class: "chart-sub" }, L("Weltbank, Zinsausgaben des Zentralstaats in " + country.currency + ", nominal. Schraffiert: keine Daten. Nicht über Länder vergleichbar (Währung, Inflation) und keine Grundlage für Jahrgangskosten.",
+        "World Bank, central government interest payments in " + country.currency + ", nominal. Hatched: no data. Not comparable across countries (currency, inflation) and no basis for vintage costs.")),
       box));
     queueMicrotask(() => cleanups.push(barChart(box, {
       cats: years, stacks: [{ color: "var(--series-1)", values: years.map(y => wb[y] || 0) }], gaps: years.map(y => wb[y] === undefined),
-      selected: years.indexOf(state.year), height: 200, xEvery: 10, focusable: false, gapLabel: "keine Daten",
+      selected: years.indexOf(state.year), height: 200, xEvery: 10, focusable: false, gapLabel: L("keine Daten", "no data"),
       yFormat: t => moneyShort(t),
-      tooltip: i => ({ head: String(years[i]), rows: [wb[years[i]] !== undefined ? { color: "var(--series-1)", value: money(wb[years[i]], country.currency), label: "gezahlte Zinsen Zentralstaat (Weltbank)" } : { value: "keine Daten", label: "" }] }),
+      tooltip: i => ({ head: String(years[i]), rows: [wb[years[i]] !== undefined ? { color: "var(--series-1)", value: money(wb[years[i]], country.currency), label: L("gezahlte Zinsen Zentralstaat (Weltbank)", "central government interest paid (World Bank)") } : { value: L("keine Daten", "no data"), label: "" }] }),
       onClick: i => { location.hash = `#/${country.code}/${years[i]}`; },
     })));
-    out.push(h("section", { class: "card" }, h("h2", null, "Amtliche Quellen für Einzelemissionen"),
+    out.push(h("section", { class: "card" }, h("h2", null, L("Amtliche Quellen für Einzelemissionen", "Official sources for individual issues")),
       country.candidates.length ? h("ul", null, country.candidates.map(c => h("li", null, h("a", { href: c.url, rel: "noopener" }, c.title),
-        h("div", { class: "muted" }, `Abrufprüfung: ${c.check}. ${c.note}`)))) : h("p", null, "Noch keine Quelle erfasst.")));
+        h("div", { class: "muted" }, L("Abrufprüfung: ", "Retrieval check: ") + `${tr(c.check)}. ${tr(c.note)}`)))) : h("p", null, L("Noch keine Quelle erfasst.", "No source recorded yet."))));
     return out;
   }
 
@@ -817,35 +925,41 @@
     const years = []; for (let y = countries.last_year; y >= 1950; y--) years.push(y);
     const sel = h("select", { id: "cmpYear", onchange: e => { location.hash = `#/vergleich/${e.target.value}`; } },
       years.map(y => h("option", { value: y, selected: y === year ? true : null }, String(y))));
-    const rows = countries.countries.map(c => {
+    const list = countries.countries.slice().sort((a, b) => countryName(a).localeCompare(countryName(b), LANG));
+    const rows = list.map(c => {
       const t = vintage[c.code] && vintage[c.code].totals;
       const w = intl[c.code].weo[year];
       const wb = intl[c.code].wb_interest[year];
       return h("tr", null,
-        h("td", null, h("a", { href: `#/${c.code}/${year}` }, c.name)),
-        ...(t ? [h("td", { class: "r" }, nf2.format(t.cost_per_100), h("div", { class: "muted" }, t.cost_low !== t.cost_high ? "inkl. Projektion" : "berechnet")),
-          h("td", { class: "r" }, nf1.format(t.avg_term) + " J."),
+        h("td", null, h("a", { href: `#/${c.code}/${year}` }, countryName(c))),
+        ...(t ? [h("td", { class: "r" }, nf2.format(t.cost_per_100), h("div", { class: "muted" }, t.cost_low !== t.cost_high ? L("inkl. Projektion", "incl. projection") : L("berechnet", "calculated"))),
+          h("td", { class: "r" }, yrs(t.avg_term)),
           h("td", { class: "r" }, nf2.format(t.cost_per_100_year)),
           h("td", { class: "r" }, pct(t.avg_yield))]
-          : [h("td", { colspan: 4, class: "muted" }, c.vintage_data ? "kein Jahrgang in diesem Jahr" : "keine Einzelemissionsdaten importiert")]),
-        h("td", { class: "r" }, w && w.net_interest !== undefined ? nf2.format(w.net_interest) + " %" : "–", w && w.projection ? h("div", { class: "muted" }, "Projektion") : null),
-        h("td", { class: "r" }, w && w.debt !== undefined ? nf1.format(w.debt) + " %" : "–"),
+          : [h("td", { colspan: 4, class: "muted" }, c.vintage_data ? L("kein Jahrgang in diesem Jahr", "no vintage in this year") : L("keine Einzelemissionsdaten importiert", "no individual issue data imported"))]),
+        h("td", { class: "r" }, w && w.net_interest !== undefined ? pctNum(w.net_interest) : "–", w && w.projection ? h("div", { class: "muted" }, L("Projektion", "projection")) : null),
+        h("td", { class: "r" }, w && w.debt !== undefined ? pctNum(w.debt, nf1) : "–"),
         h("td", { class: "r" }, wb !== undefined ? money(wb, c.currency) : "–"));
     });
-    app.replaceChildren(h("h1", null, `G20-Vergleich ${year}`),
-      h("div", { class: "controls" }, h("label", { for: "cmpYear" }, "Jahr", sel)),
-      h("p", { class: "note compare" }, h("strong", null, "Lesehilfe. "),
-        "Die ersten vier Spalten beziehen sich auf die im Jahr erfassten Emissionen des Zentralstaats und liegen nur für Länder mit Einzelemissionsdaten vor. ",
-        "„Je 100 Erlös“ summiert die Kosten über die gesamte Laufzeit; lange Kredite kosten insgesamt mehr, können aber günstigere jährliche Konditionen haben – deshalb stehen Laufzeit und Jahreswert daneben. ",
-        "Gesamtstaat-Spalten: IWF (alle staatlichen Ebenen, % des BIP); Nettozinsen = Zinsausgaben abzüglich Zinseinnahmen, daher bei Ländern mit hohen Finanzanlagen (z. B. Japan, Kanada, Saudi-Arabien) sehr niedrig. Die letzte Spalte ist nominal in Landeswährung und nicht über Länder vergleichbar."),
+    app.replaceChildren(h("h1", null, L(`G20-Vergleich ${year}`, `G20 comparison ${year}`)),
+      h("div", { class: "controls" }, h("label", { for: "cmpYear" }, L("Jahr", "Year"), sel)),
+      h("p", { class: "note compare" }, h("strong", null, L("Lesehilfe. ", "How to read. ")),
+        L("Die ersten vier Spalten beziehen sich auf die im Jahr erfassten Emissionen des Zentralstaats und liegen nur für Länder mit Einzelemissionsdaten vor. ",
+          "The first four columns refer to the central government's issues covered in the year and are only available for countries with individual issue data. "),
+        L("„Je 100 Erlös“ summiert die Kosten über die gesamte Laufzeit; lange Kredite kosten insgesamt mehr, können aber günstigere jährliche Konditionen haben – deshalb stehen Laufzeit und Jahreswert daneben. ",
+          "“Per 100 of proceeds” sums the cost over the full term; long-term borrowing costs more in total but can have cheaper annual terms – hence term and annual value next to it. "),
+        L("Gesamtstaat-Spalten: IWF (alle staatlichen Ebenen, % des BIP); Nettozinsen = Zinsausgaben abzüglich Zinseinnahmen, daher bei Ländern mit hohen Finanzanlagen (z. B. Japan, Kanada, Saudi-Arabien) sehr niedrig. Die letzte Spalte ist nominal in Landeswährung und nicht über Länder vergleichbar.",
+          "General government columns: IMF (all levels of government, % of GDP); net interest = interest expenditure minus interest income, hence very low for countries with large financial assets (e.g. Japan, Canada, Saudi Arabia). The last column is nominal in local currency and not comparable across countries.")),
       h("section", { class: "card" }, h("div", { class: "table-scroll" }, h("table", null,
         h("thead", null,
-          h("tr", null, h("th", null, ""), h("th", { colspan: 4 }, "Zentralstaat: erfasste Emissionen des Jahres"), h("th", { colspan: 2 }, "Gesamtstaat (IWF)"), h("th", null, "Zentralstaat")),
-          h("tr", null, h("th", null, "Land"), h("th", { class: "r" }, "Kosten je 100 Erlös"), h("th", { class: "r" }, "Ø Laufzeit"),
-            h("th", { class: "r" }, "je 100 u. Jahr"), h("th", { class: "r" }, "Ø Rendite"), h("th", { class: "r" }, "Nettozinsen % BIP"),
-            h("th", { class: "r" }, "Schulden % BIP"), h("th", { class: "r" }, "gezahlte Zinsen (Weltbank)"))),
+          h("tr", null, h("th", null, ""), h("th", { colspan: 4 }, L("Zentralstaat: erfasste Emissionen des Jahres", "Central government: issues covered in the year")), h("th", { colspan: 2 }, L("Gesamtstaat (IWF)", "General government (IMF)")), h("th", null, L("Zentralstaat", "Central government"))),
+          h("tr", null, h("th", null, L("Land", "Country")), h("th", { class: "r" }, L("Kosten je 100 Erlös", "Cost per 100 of proceeds")), h("th", { class: "r" }, L("Ø Laufzeit", "Avg. term")),
+            h("th", { class: "r" }, L("je 100 u. Jahr", "per 100 and year")), h("th", { class: "r" }, L("Ø Rendite", "Avg. yield")), h("th", { class: "r" }, L("Nettozinsen % BIP", "Net interest % GDP")),
+            h("th", { class: "r" }, L("Schulden % BIP", "Debt % GDP")), h("th", { class: "r" }, L("gezahlte Zinsen (Weltbank)", "interest paid (World Bank)")))),
         h("tbody", null, rows)))),
-      h("p", { class: "muted" }, "Status: Spalten 2–5 ", chip("calc"), " (bei TIPS/inflationsindexierten Anleihen teils ", chip("proj"), "), Spalten 6–8 ", chip("intl"), ". Die Afrikanische Union und die EU sind als G20-Mitglieder keine Staaten mit eigener Zentralregierungsschuld im Sinne dieser Seite und werden nicht einzeln aufgeführt."));
+      h("p", { class: "muted" }, L("Status: Spalten 2–5 ", "Status: columns 2–5 "), chip("calc"), L(" (bei TIPS/inflationsindexierten Anleihen teils ", " (partly "), chip("proj"), L("), Spalten 6–8 ", " for TIPS/inflation-linked bonds), columns 6–8 "), chip("intl"),
+        L(". Die Afrikanische Union und die EU sind als G20-Mitglieder keine Staaten mit eigener Zentralregierungsschuld im Sinne dieser Seite und werden nicht einzeln aufgeführt.",
+          ". The African Union and the EU, as G20 members, are not states with their own central government debt in the sense of this site and are not listed individually.")));
   }
 
   // ------------------------------------------------------------------ Regierungen
@@ -854,42 +968,45 @@
     const withData = countries.countries.filter(c => c.vintage_data);
     const c = withData.find(x => x.code === codeArg) || withData.find(x => x.code === "DE");
     CUR = c.currency;
+    const meta = cmeta(c.code);
     const g = await load(`data/${c.code.toLowerCase()}/governments.json`);
     const sel = h("select", { id: "govCountry", onchange: e => { location.hash = `#/regierungen/${e.target.value}`; } },
-      withData.map(x => h("option", { value: x.code, selected: x.code === c.code ? true : null }, x.name)));
-    const running = x => (x.last === g.last_year ? " (laufend)" : "");
+      withData.map(x => h("option", { value: x.code, selected: x.code === c.code ? true : null }, countryName(x))));
+    const running = x => (x.last === g.last_year ? L(" (laufend)", " (ongoing)") : "");
     const hasModel = g.governments.some(x => x.model_mid !== undefined);
     const rows = g.governments.slice().reverse().map(x => {
       const cx = x.context || {};
       return h("tr", null,
-        h("td", null, x.head, h("div", { class: "muted" }, `ab ${dateDe(x.from)}`), h("div", { class: "muted" }, x.parties)),
+        h("td", null, x.head, h("div", { class: "muted" }, `${L("ab", "from")} ${dateDe(x.from)}`), h("div", { class: "muted" }, tr(x.parties))),
         x.n ? h("td", { class: "r" }, money(x.cost),
           Math.abs(x.cost_high - x.cost_low) > Math.abs(x.cost) * 0.005 ? h("div", { class: "muted" }, `${money(x.cost_low)} – ${money(x.cost_high)}`) : null,
-          h("div", { class: "muted" }, `${x.first}–${x.last}${running(x)}`)) : h("td", { class: "r" }, chip("none", "keine Einzeldaten")),
-        h("td", { class: "r" }, cx.cost_per_100 !== undefined ? nf2.format(cx.cost_per_100) : "–", cx.avg_term ? h("div", { class: "muted" }, `Ø ${nf1.format(cx.avg_term)} J. · ${nf2.format(cx.cost_per_100_year)} je Jahr`) : null),
+          h("div", { class: "muted" }, `${x.first}–${x.last}${running(x)}`)) : h("td", { class: "r" }, chip("none", L("keine Einzeldaten", "no individual data"))),
+        h("td", { class: "r" }, cx.cost_per_100 !== undefined ? nf2.format(cx.cost_per_100) : "–", cx.avg_term ? h("div", { class: "muted" }, L(`Ø ${nf1.format(cx.avg_term)} J. · ${nf2.format(cx.cost_per_100_year)} je Jahr`, `avg. ${nf1.format(cx.avg_term)} yrs · ${nf2.format(cx.cost_per_100_year)} per year`)) : null),
         h("td", { class: "r" }, cx.avg_yield !== null && cx.avg_yield !== undefined ? pct(cx.avg_yield) : "–"),
         h("td", { class: "r" }, cx.inherited_redemptions !== null && cx.inherited_redemptions !== undefined ? money(cx.inherited_redemptions) : "–"),
         hasModel ? (x.model_mid !== undefined ? h("td", { class: "r" }, `${money(x.model_low)} – ${money(x.model_high)}`,
-          h("div", { class: "muted" }, `Mitte ${money(x.model_mid)} · ${x.model_first}–${x.model_last}`)) : h("td", { class: "r" }, x.n ? "–" : chip("none"))) : null);
+          h("div", { class: "muted" }, L(`Mitte ${money(x.model_mid)} · ${x.model_first}–${x.model_last}`, `mid ${money(x.model_mid)} · ${x.model_first}–${x.model_last}`))) : h("td", { class: "r" }, x.n ? "–" : chip("none"))) : null);
     });
-    app.replaceChildren(h("h1", null, `Eingegangene Zinslast je ${COUNTRY_META[c.code].govLabel}`),
-      h("div", { class: "controls" }, h("label", { for: "govCountry" }, "Land", sel)),
-      h("p", null, "Summe der Finanzierungskosten bis Fälligkeit der Kredite, die in der Amtszeit aufgenommen wurden (", COUNTRY_META[c.code].scopeShort, "). ",
-        "Enthalten sind nur die Kosten der ursprünglichen Kredite, nicht deren spätere Anschlussfinanzierung."),
-      h("p", { class: "note compare" }, h("strong", null, "Zeitliche Zuordnung, keine politische Bewertung. "),
-        "Wie viel Zinslast eine Regierung eingeht, hängt stark vom Zinsniveau ihrer Amtszeit und von den Fälligkeiten ab, die sie von Vorgängern übernimmt und refinanzieren muss. ",
-        "Beides steht deshalb in eigenen Spalten. Für eine Bewertung gehören zudem Laufzeitwahl, Konjunktur und Krisen dazu."),
+    app.replaceChildren(h("h1", null, L(`Eingegangene Zinslast je ${meta.govTitle}`, `Interest burden committed per ${meta.govTitle}`)),
+      h("div", { class: "controls" }, h("label", { for: "govCountry" }, L("Land", "Country"), sel)),
+      h("p", null, L("Summe der Finanzierungskosten bis Fälligkeit der Kredite, die in der Amtszeit aufgenommen wurden (", "Total financing cost until maturity of the borrowing taken up during the term ("), meta.scopeShort, "). ",
+        L("Enthalten sind nur die Kosten der ursprünglichen Kredite, nicht deren spätere Anschlussfinanzierung.", "Only the cost of the original borrowing is included, not its later refinancing.")),
+      h("p", { class: "note compare" }, h("strong", null, L("Zeitliche Zuordnung, keine politische Bewertung. ", "Temporal assignment, not a political judgement. ")),
+        L("Wie viel Zinslast eine Regierung eingeht, hängt stark vom Zinsniveau ihrer Amtszeit und von den Fälligkeiten ab, die sie von Vorgängern übernimmt und refinanzieren muss. ",
+          "How much interest burden a government commits depends heavily on the interest-rate level during its term and on the maturities it inherits from predecessors and has to refinance. "),
+        L("Beides steht deshalb in eigenen Spalten. Für eine Bewertung gehören zudem Laufzeitwahl, Konjunktur und Krisen dazu.", "Both are therefore shown in separate columns. An assessment would also need to consider the choice of maturities, the economic cycle and crises.")),
       h("section", { class: "card" }, h("div", { class: "table-scroll" }, h("table", { class: "wrap-cells" },
-        h("thead", null, h("tr", null, h("th", null, "Regierung"), h("th", { class: "r" }, `Zinslast, berechnet (ab ${g.data_from})`),
-          h("th", { class: "r" }, "je 100 Erlös"), h("th", { class: "r" }, "Zinsniveau (Ø Rendite)"),
-          h("th", { class: "r" }, "übernommene Fälligkeiten"),
-          hasModel ? h("th", { class: "r" }, "modelliert (1960–1998)") : null)),
+        h("thead", null, h("tr", null, h("th", null, L("Regierung", "Government")), h("th", { class: "r" }, L(`Zinslast, berechnet (ab ${g.data_from})`, `Interest burden, calculated (from ${g.data_from})`)),
+          h("th", { class: "r" }, L("je 100 Erlös", "per 100 of proceeds")), h("th", { class: "r" }, L("Zinsniveau (Ø Rendite)", "Interest-rate level (avg. yield)")),
+          h("th", { class: "r" }, L("übernommene Fälligkeiten", "inherited maturities")),
+          hasModel ? h("th", { class: "r" }, L("modelliert (1960–1998)", "modelled (1960–1998)")) : null)),
         h("tbody", null, rows)))),
-      h("p", { class: "note" }, g.note),
-      h("p", { class: "muted" }, `„Übernommene Fälligkeiten“: Rückzahlungen in der Amtszeit aus Emissionen, die vor Amtsbeginn begeben wurden – nur erfasste Emissionen (ab ${g.data_from}); für die ersten Amtszeiten nach Datenbeginn deshalb zu niedrig. `,
-        "Ø Emissionsrendite: volumengewichtet über alle Emissionen einschließlich kurzlaufender Geldmarktpapiere. ",
-        hasModel ? "Die modellierte Spalte stammt aus Bundesbank-Aggregaten mit Laufzeitannahmen und ist nicht gleichwertig mit den berechneten Werten. " : "",
-        c.code === "DE" ? "Beträge vor 1999 von D-Mark in Euro umgerechnet, nicht inflationsbereinigt." : "Nominal, nicht inflationsbereinigt."));
+      h("p", { class: "note" }, EN() && g.note_en ? g.note_en : g.note),
+      h("p", { class: "muted" }, L(`„Übernommene Fälligkeiten“: Rückzahlungen in der Amtszeit aus Emissionen, die vor Amtsbeginn begeben wurden – nur erfasste Emissionen (ab ${g.data_from}); für die ersten Amtszeiten nach Datenbeginn deshalb zu niedrig. `,
+        `“Inherited maturities”: redemptions during the term from issues made before the term began – covered issues only (from ${g.data_from}); therefore too low for the first terms after the data begin. `),
+        L("Ø Emissionsrendite: volumengewichtet über alle Emissionen einschließlich kurzlaufender Geldmarktpapiere. ", "Avg. issue yield: volume-weighted over all issues including short-term money-market paper. "),
+        hasModel ? L("Die modellierte Spalte stammt aus Bundesbank-Aggregaten mit Laufzeitannahmen und ist nicht gleichwertig mit den berechneten Werten. ", "The modelled column comes from Bundesbank aggregates with term assumptions and is not equivalent to the calculated values. ") : "",
+        c.code === "DE" ? L("Beträge vor 1999 von D-Mark in Euro umgerechnet, nicht inflationsbereinigt.", "Amounts before 1999 converted from Deutsche Mark to euro, not adjusted for inflation.") : L("Nominal, nicht inflationsbereinigt.", "Nominal, not adjusted for inflation.")));
   }
 
   // ------------------------------------------------------------------ Worum geht es? (einfach erklärt)
@@ -901,78 +1018,98 @@
     const box1 = h("div", { class: "chart" }), box2 = h("div", { class: "chart" });
     const sec = (title, ...body) => h("section", { class: "card" }, h("h2", null, title), ...body);
     app.replaceChildren(h("div", { class: "doc" },
-      h("h1", null, "Worum geht es? Einfach erklärt"),
-      h("p", { class: "lead" }, "Wenn ein Staat Geld leiht, zahlt er dafür Zinsen – oft viele Jahre lang. Diese Seite zeigt, in welchem Jahr diese Zinsen ",
-        h("em", null, "versprochen"), " wurden. Nicht nur, wann sie ", h("em", null, "bezahlt"), " werden."),
-      sec("Ein Vergleich aus dem Alltag",
-        h("p", null, "Stell dir vor, jemand schließt heute einen Handyvertrag über fünf Jahre ab. Bezahlt wird jeden Monat ein bisschen – die Entscheidung fiel aber heute. ",
-          "Wer später den Vertrag übernimmt, muss weiterzahlen, obwohl er ihn nicht abgeschlossen hat."),
-        h("p", null, "Beim Staat ist es ähnlich: Eine Regierung nimmt Kredite auf, die Zinsen fallen über viele Jahre an. Im Haushalt steht aber immer nur, was ", h("em", null, "in diesem Jahr"),
-          " an Zinsen bezahlt wird – egal, welche Regierung den Kredit aufgenommen hat.")),
-      sec("Was diese Seite anders macht",
-        h("p", null, "Sie rechnet für jeden einzelnen Kredit aus, wie viel Zinsen er bis zum Ende kostet, und ordnet diese Summe dem Jahr zu, in dem der Kredit aufgenommen wurde. ",
-          "Ein echtes Beispiel: Im September 2026 lieh sich der Bund 3,7 Mrd. € für fünf Jahre (Bundesobligation). Bis 2031 kostet das 611 Mio. € Zinsen."),
+      h("h1", null, L("Worum geht es? Einfach erklärt", "What is this about? Explained simply")),
+      h("p", { class: "lead" }, L("Wenn ein Staat Geld leiht, zahlt er dafür Zinsen – oft viele Jahre lang. Diese Seite zeigt, in welchem Jahr diese Zinsen ", "When a state borrows money, it pays interest on it – often for many years. This site shows in which year this interest was "),
+        h("em", null, L("versprochen", "promised")), L(" wurden. Nicht nur, wann sie ", ". Not just when it is "), h("em", null, L("bezahlt", "paid")), L(" werden.", ".")),
+      sec(L("Ein Vergleich aus dem Alltag", "An everyday comparison"),
+        h("p", null, L("Stell dir vor, jemand schließt heute einen Handyvertrag über fünf Jahre ab. Bezahlt wird jeden Monat ein bisschen – die Entscheidung fiel aber heute. ",
+          "Imagine someone signs a five-year mobile phone contract today. A little is paid every month – but the decision was made today. "),
+          L("Wer später den Vertrag übernimmt, muss weiterzahlen, obwohl er ihn nicht abgeschlossen hat.", "Whoever takes over the contract later has to keep paying, although they did not sign it.")),
+        h("p", null, L("Beim Staat ist es ähnlich: Eine Regierung nimmt Kredite auf, die Zinsen fallen über viele Jahre an. Im Haushalt steht aber immer nur, was ", "It is similar with the state: a government borrows, and the interest falls due over many years. But the budget only ever shows what is paid in interest "),
+          h("em", null, L("in diesem Jahr", "in this year")),
+          L(" an Zinsen bezahlt wird – egal, welche Regierung den Kredit aufgenommen hat.", " – regardless of which government took out the loan."))),
+      sec(L("Was diese Seite anders macht", "What this site does differently"),
+        h("p", null, L("Sie rechnet für jeden einzelnen Kredit aus, wie viel Zinsen er bis zum Ende kostet, und ordnet diese Summe dem Jahr zu, in dem der Kredit aufgenommen wurde. ",
+          "For every single loan it calculates how much interest it costs until the end, and assigns this total to the year in which the loan was taken out. "),
+          L("Ein echtes Beispiel: Im September 2026 lieh sich der Bund 3,7 Mrd. € für fünf Jahre (Bundesobligation). Bis 2031 kostet das 611 Mio. € Zinsen.",
+            "A real example: in September 2026 the German federal government borrowed €3.7 bn for five years (a federal note). Until 2031 this costs €611 m in interest.")),
         h("div", { class: "two-col" },
-          h("div", null, h("h3", null, "So zeigt es der Haushalt"), h("p", { class: "muted" }, "Zinsen verteilt auf die Jahre, in denen sie gezahlt werden. 2026 sogar leicht negativ, weil der Käufer bei Kauf aufgelaufene Zinsen (Stückzinsen) mitbezahlt."), box1),
-          h("div", null, h("h3", null, "So zeigt es diese Seite"), h("p", { class: "muted" }, "Die gesamte Zinslast von 611 Mio. € steht im Jahr der Entscheidung: 2026."), box2))),
-      sec("Was dadurch sichtbar wird",
+          h("div", null, h("h3", null, L("So zeigt es der Haushalt", "How the budget shows it")), h("p", { class: "muted" }, L("Zinsen verteilt auf die Jahre, in denen sie gezahlt werden. 2026 sogar leicht negativ, weil der Käufer bei Kauf aufgelaufene Zinsen (Stückzinsen) mitbezahlt.",
+            "Interest spread over the years in which it is paid. 2026 is even slightly negative because the buyer also pays the interest accrued so far (accrued interest).")), box1),
+          h("div", null, h("h3", null, L("So zeigt es diese Seite", "How this site shows it")), h("p", { class: "muted" }, L("Die gesamte Zinslast von 611 Mio. € steht im Jahr der Entscheidung: 2026.", "The entire interest burden of €611 m appears in the year of the decision: 2026.")), box2))),
+      sec(L("Was dadurch sichtbar wird", "What becomes visible"),
         h("ul", null,
-          h("li", null, h("strong", null, "Welche Lasten eine Regierung hinterlässt. "), "Zinsen aus Krediten von heute müssen oft spätere Regierungen bezahlen."),
-          h("li", null, h("strong", null, "Wie stark das Zinsniveau zählt. "), "2016–2021 bekam der Bund teils mehr Geld, als er zurückzahlen muss (negative Zinsen). Seit 2022 kosten neue Kredite wieder deutlich mehr."),
-          h("li", null, h("strong", null, "Dass der größte Teil neuer Kredite alte Kredite ersetzt. "), "Wird ein Kredit fällig, leiht sich der Staat meist neues Geld, um ihn zurückzuzahlen (Anschlussfinanzierung). Nur ein kleinerer Teil ist echte neue Verschuldung."),
-          h("li", null, h("strong", null, "Wie teuer Kredite im Vergleich sind. "), "„Kosten je 100 € Erlös“ zeigt, wie viel Zinsen der Staat für jeweils 100 € geliehenes Geld bis zum Ende zahlt – vergleichbar zwischen Jahren und Ländern. Die Laufzeit gehört immer dazu: Ein langer Kredit kostet insgesamt mehr, kann aber pro Jahr günstiger sein."))),
-      sec("Was diese Seite nicht tut",
+          h("li", null, h("strong", null, L("Welche Lasten eine Regierung hinterlässt. ", "Which burdens a government leaves behind. ")), L("Zinsen aus Krediten von heute müssen oft spätere Regierungen bezahlen.", "Interest on today's borrowing often has to be paid by later governments.")),
+          h("li", null, h("strong", null, L("Wie stark das Zinsniveau zählt. ", "How much the interest-rate level matters. ")), L("2016–2021 bekam der Bund teils mehr Geld, als er zurückzahlen muss (negative Zinsen). Seit 2022 kosten neue Kredite wieder deutlich mehr.",
+            "In 2016–2021 the German government sometimes received more money than it has to repay (negative interest rates). Since 2022, new borrowing has become much more expensive again.")),
+          h("li", null, h("strong", null, L("Dass der größte Teil neuer Kredite alte Kredite ersetzt. ", "That most new borrowing replaces old borrowing. ")), L("Wird ein Kredit fällig, leiht sich der Staat meist neues Geld, um ihn zurückzuzahlen (Anschlussfinanzierung). Nur ein kleinerer Teil ist echte neue Verschuldung.",
+            "When a loan falls due, the state usually borrows new money to repay it (refinancing). Only a smaller part is genuinely new debt.")),
+          h("li", null, h("strong", null, L("Wie teuer Kredite im Vergleich sind. ", "How expensive borrowing is in comparison. ")), L("„Kosten je 100 € Erlös“ zeigt, wie viel Zinsen der Staat für jeweils 100 € geliehenes Geld bis zum Ende zahlt – vergleichbar zwischen Jahren und Ländern. Die Laufzeit gehört immer dazu: Ein langer Kredit kostet insgesamt mehr, kann aber pro Jahr günstiger sein.",
+            "“Cost per €100 of proceeds” shows how much interest the state pays until the end for every €100 borrowed – comparable across years and countries. The term always belongs with it: a long loan costs more in total but can be cheaper per year.")))),
+      sec(L("Was diese Seite nicht tut", "What this site does not do"),
         h("ul", null,
-          h("li", null, "Sie bewertet keine Regierung. Sie ordnet zeitlich zu. Ob ein Kredit sinnvoll war, hängt von vielem ab: Zinsniveau, Krisen, wofür das Geld ausgegeben wurde."),
-          h("li", null, "Sie erfindet keine Zahlen. Wo einzelne Kredite nicht bekannt sind, steht „keine ausreichenden Daten“ – oder eine klar markierte Schätzung."),
-          h("li", null, "Sie sagt nicht voraus, was die spätere Anschlussfinanzierung kostet. Das hängt von künftigen Zinsen ab und wird getrennt gezeigt."))),
-      sec("Woran man erkennt, wie sicher eine Zahl ist",
+          h("li", null, L("Sie bewertet keine Regierung. Sie ordnet zeitlich zu. Ob ein Kredit sinnvoll war, hängt von vielem ab: Zinsniveau, Krisen, wofür das Geld ausgegeben wurde.",
+            "It does not judge any government. It assigns in time. Whether a loan made sense depends on many things: interest rates, crises, what the money was spent on.")),
+          h("li", null, L("Sie erfindet keine Zahlen. Wo einzelne Kredite nicht bekannt sind, steht „keine ausreichenden Daten“ – oder eine klar markierte Schätzung.",
+            "It does not invent figures. Where individual loans are not known, it says “insufficient data” – or shows a clearly marked estimate.")),
+          h("li", null, L("Sie sagt nicht voraus, was die spätere Anschlussfinanzierung kostet. Das hängt von künftigen Zinsen ab und wird getrennt gezeigt.",
+            "It does not predict what later refinancing will cost. That depends on future interest rates and is shown separately.")))),
+      sec(L("Woran man erkennt, wie sicher eine Zahl ist", "How to tell how reliable a figure is"),
         h("ul", { class: "status-legend" },
-          h("li", null, chip("calc"), " – aus jedem einzelnen Kredit nachgerechnet und gegen die veröffentlichten Daten geprüft."),
-          h("li", null, chip("official"), " – so von einer Behörde veröffentlicht."),
-          h("li", null, chip("intl"), " – aus einer internationalen Datenbank (Weltbank, IWF), oft etwas anders abgegrenzt."),
-          h("li", null, chip("model"), " – geschätzt mit einer offen beschriebenen Annahme."),
-          h("li", null, chip("proj"), " – hängt von der Zukunft ab, etwa der Inflation; deshalb als Spanne."),
-          h("li", null, chip("none"), " – dafür gibt es keine verlässlichen Daten."))),
-      sec("Wer steckt dahinter?",
-        h("p", null, "Ein unabhängiges Projekt. Alle Rohdaten stammen aus öffentlichen Quellen und liegen unverändert im ", h("a", { href: "https://github.com/hstre/TrueDepts", rel: "noopener" }, "Quellcode-Repository"), ". ",
-          "Den genauen Rechenweg zeigt die Seite ", h("a", { href: "#/methode" }, "Methode"), ", die Prüfungen die Seite ", h("a", { href: "#/pruefung" }, "Prüfung"), ". Verantwortlich: siehe ", h("a", { href: "#/impressum" }, "Impressum"), "."),
-        h("p", null, h("a", { class: "btn", href: "#/DE/2025" }, "Zur Jahresansicht →")))));
+          h("li", null, chip("calc"), L(" – aus jedem einzelnen Kredit nachgerechnet und gegen die veröffentlichten Daten geprüft.", " – recalculated from every single loan and checked against the published data.")),
+          h("li", null, chip("official"), L(" – so von einer Behörde veröffentlicht.", " – published as such by an authority.")),
+          h("li", null, chip("intl"), L(" – aus einer internationalen Datenbank (Weltbank, IWF), oft etwas anders abgegrenzt.", " – from an international database (World Bank, IMF), often defined slightly differently.")),
+          h("li", null, chip("model"), L(" – geschätzt mit einer offen beschriebenen Annahme.", " – estimated with an openly described assumption.")),
+          h("li", null, chip("proj"), L(" – hängt von der Zukunft ab, etwa der Inflation; deshalb als Spanne.", " – depends on the future, e.g. inflation; hence shown as a range.")),
+          h("li", null, chip("none"), L(" – dafür gibt es keine verlässlichen Daten.", " – no reliable data exists for this.")))),
+      sec(L("Wer steckt dahinter?", "Who is behind this?"),
+        h("p", null, L("Ein unabhängiges Projekt. Alle Rohdaten stammen aus öffentlichen Quellen und liegen unverändert im ", "An independent project. All raw data comes from public sources and is stored unchanged in the "),
+          h("a", { href: "https://github.com/hstre/TrueDepts", rel: "noopener" }, L("Quellcode-Repository", "source code repository")), ". ",
+          L("Den genauen Rechenweg zeigt die Seite ", "The exact calculation is shown on the page "), h("a", { href: "#/methode" }, L("Methode", "Methodology")),
+          L(", die Prüfungen die Seite ", ", the checks on the page "), h("a", { href: "#/pruefung" }, L("Prüfung", "Checks")), L(". Verantwortlich: siehe ", ". Responsible: see "), h("a", { href: "#/impressum" }, L("Impressum", "Legal notice")), "."),
+        h("p", null, h("a", { class: "btn", href: "#/DE/2025" }, L("Zur Jahresansicht →", "Go to the year view →"))))));
     const common = { cats: years, height: 180, focusable: false, xEvery: 1, yFormat: t => moneyShort(t) };
     queueMicrotask(() => {
-      cleanups.push(barChart(box1, { ...common, stacks: [{ color: "var(--series-1)", values: budget }], ariaLabel: "Zinszahlungen nach Zahlungsjahr",
-        tooltip: i => ({ head: String(years[i]), rows: [{ color: "var(--series-1)", value: money(budget[i]), label: "in diesem Jahr gezahlt" }] }) }));
-      cleanups.push(barChart(box2, { ...common, stacks: [{ color: "var(--series-1)", values: vintage }], ariaLabel: "Zinslast dem Aufnahmejahr zugeordnet",
-        tooltip: i => ({ head: String(years[i]), rows: [{ color: "var(--series-1)", value: money(vintage[i]), label: i === 0 ? "gesamte Zinslast bis 2031" : "" }] }) }));
+      cleanups.push(barChart(box1, { ...common, stacks: [{ color: "var(--series-1)", values: budget }], ariaLabel: L("Zinszahlungen nach Zahlungsjahr", "Interest payments by payment year"),
+        tooltip: i => ({ head: String(years[i]), rows: [{ color: "var(--series-1)", value: money(budget[i]), label: L("in diesem Jahr gezahlt", "paid in this year") }] }) }));
+      cleanups.push(barChart(box2, { ...common, stacks: [{ color: "var(--series-1)", values: vintage }], ariaLabel: L("Zinslast dem Aufnahmejahr zugeordnet", "Interest burden assigned to the year of borrowing"),
+        tooltip: i => ({ head: String(years[i]), rows: [{ color: "var(--series-1)", value: money(vintage[i]), label: i === 0 ? L("gesamte Zinslast bis 2031", "total interest burden until 2031") : "" }] }) }));
     });
   }
 
   // ------------------------------------------------------------------ Impressum
   async function viewImprint() {
     const im = await load("data/impressum.json");
-    const missing = t => h("span", { class: "missing" }, `[${t} fehlt]`);
-    const street = im.street || missing("Straße und Hausnummer");
-    const town = im.postal_code ? `${im.postal_code} ${im.city}` : h("span", null, missing("Postleitzahl"), " ", im.city);
+    const missing = t => h("span", { class: "missing" }, `[${t} ${L("fehlt", "missing")}]`);
+    const street = im.street || missing(L("Straße und Hausnummer", "street and number"));
+    const town = im.postal_code ? `${im.postal_code} ${im.city}` : h("span", null, missing(L("Postleitzahl", "postal code")), " ", im.city);
     app.replaceChildren(h("div", { class: "doc" },
-      h("h1", null, "Impressum"),
-      h("h2", null, "Angaben gemäß § 5 DDG"),
-      h("p", null, im.name, h("br"), street, h("br"), town, h("br"), im.country),
-      h("h2", null, "Kontakt"),
-      h("p", null, "E-Mail: ", im.email ? h("a", { href: `mailto:${im.email}` }, im.email) : missing("E-Mail-Adresse"), im.phone ? h("span", null, h("br"), "Telefon: ", im.phone) : null),
-      h("h2", null, "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV"),
-      h("p", null, im.name, ", Anschrift wie oben."),
-      h("h2", null, "Haftung für Inhalte"),
-      h("p", null, "Die Inhalte wurden mit Sorgfalt aus öffentlichen Quellen berechnet; Rechenweg und Prüfungen sind offengelegt. Für Richtigkeit, Vollständigkeit und Aktualität wird keine Gewähr übernommen. ",
-        "Die Seite ist keine Anlage-, Steuer- oder Finanzberatung und keine politische Bewertung."),
-      h("h2", null, "Haftung für Links"),
-      h("p", null, "Die Seite verlinkt auf Angebote Dritter (Behörden, internationale Organisationen). Für deren Inhalte sind ausschließlich die jeweiligen Anbieter verantwortlich."),
-      h("h2", null, "Datenschutz"),
-      h("p", null, "Diese Seite wird über GitHub Pages (GitHub Inc., USA) bereitgestellt. Beim Aufruf verarbeitet GitHub technisch notwendige Verbindungsdaten wie die IP-Adresse, um die Seite auszuliefern und abzusichern; Einzelheiten: ",
-        h("a", { href: "https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement", rel: "noopener" }, "Datenschutzerklärung von GitHub"), "."),
-      h("p", null, "Die Seite selbst setzt keine Cookies, verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von Drittanbietern. Nur die Wahl hell/dunkel wird, falls gewählt, lokal im Browser gespeichert (localStorage) und nicht übertragen."),
-      h("p", null, "Betroffene haben nach der DSGVO das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Widerspruch sowie Beschwerde bei einer Aufsichtsbehörde. Kontakt: siehe oben."),
-      h("h2", null, "Quellcode und Daten"),
-      h("p", null, "Quellcode und unveränderte Rohdaten: ", h("a", { href: "https://github.com/hstre/TrueDepts", rel: "noopener" }, "github.com/hstre/TrueDepts"), ". Die Rechte an den Rohdaten liegen bei den jeweiligen Herausgebern (siehe ", h("a", { href: "#/quellen" }, "Quellen"), ").")));
+      h("h1", null, L("Impressum", "Legal notice (Impressum)")),
+      EN() ? h("p", { class: "note" }, "Translation for information. The German version is legally binding.") : null,
+      h("h2", null, L("Angaben gemäß § 5 DDG", "Information pursuant to § 5 DDG (German Digital Services Act)")),
+      h("p", null, im.name, h("br"), street, h("br"), town, h("br"), EN() ? "Germany" : im.country),
+      h("h2", null, L("Kontakt", "Contact")),
+      h("p", null, L("E-Mail: ", "Email: "), im.email ? h("a", { href: `mailto:${im.email}` }, im.email) : missing(L("E-Mail-Adresse", "email address")), im.phone ? h("span", null, h("br"), L("Telefon: ", "Phone: "), im.phone) : null),
+      h("h2", null, L("Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV", "Responsible for content pursuant to § 18(2) MStV (Interstate Media Treaty)")),
+      h("p", null, im.name, L(", Anschrift wie oben.", ", address as above.")),
+      h("h2", null, L("Haftung für Inhalte", "Liability for content")),
+      h("p", null, L("Die Inhalte wurden mit Sorgfalt aus öffentlichen Quellen berechnet; Rechenweg und Prüfungen sind offengelegt. Für Richtigkeit, Vollständigkeit und Aktualität wird keine Gewähr übernommen. ",
+        "The content was calculated with care from public sources; the calculation method and checks are disclosed. No guarantee is given for accuracy, completeness or timeliness. "),
+        L("Die Seite ist keine Anlage-, Steuer- oder Finanzberatung und keine politische Bewertung.", "The site is not investment, tax or financial advice and not a political assessment.")),
+      h("h2", null, L("Haftung für Links", "Liability for links")),
+      h("p", null, L("Die Seite verlinkt auf Angebote Dritter (Behörden, internationale Organisationen). Für deren Inhalte sind ausschließlich die jeweiligen Anbieter verantwortlich.",
+        "The site links to third-party offerings (authorities, international organisations). Their respective providers are solely responsible for their content.")),
+      h("h2", null, L("Datenschutz", "Privacy")),
+      h("p", null, L("Diese Seite wird über GitHub Pages (GitHub Inc., USA) bereitgestellt. Beim Aufruf verarbeitet GitHub technisch notwendige Verbindungsdaten wie die IP-Adresse, um die Seite auszuliefern und abzusichern; Einzelheiten: ",
+        "This site is hosted on GitHub Pages (GitHub Inc., USA). When the site is accessed, GitHub processes technically necessary connection data such as the IP address to deliver and secure the site; details: "),
+        h("a", { href: EN() ? "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" : "https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement", rel: "noopener" }, L("Datenschutzerklärung von GitHub", "GitHub privacy statement")), "."),
+      h("p", null, L("Die Seite selbst setzt keine Cookies, verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von Drittanbietern. Nur die Wahl hell/dunkel und die Sprache werden, falls gewählt, lokal im Browser gespeichert (localStorage) und nicht übertragen.",
+        "The site itself sets no cookies, uses no analytics or advertising services and loads no third-party content. Only the light/dark choice and the language, if chosen, are stored locally in the browser (localStorage) and not transmitted.")),
+      h("p", null, L("Betroffene haben nach der DSGVO das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Widerspruch sowie Beschwerde bei einer Aufsichtsbehörde. Kontakt: siehe oben.",
+        "Under the GDPR, data subjects have the right of access, rectification, erasure, restriction of processing, objection and to lodge a complaint with a supervisory authority. Contact: see above.")),
+      h("h2", null, L("Quellcode und Daten", "Source code and data")),
+      h("p", null, L("Quellcode und unveränderte Rohdaten: ", "Source code and unchanged raw data: "), h("a", { href: "https://github.com/hstre/TrueDepts", rel: "noopener" }, "github.com/hstre/TrueDepts"),
+        L(". Die Rechte an den Rohdaten liegen bei den jeweiligen Herausgebern (siehe ", ". Rights to the raw data remain with the respective publishers (see "), h("a", { href: "#/quellen" }, L("Quellen", "Sources")), ").")));
   }
 
   // ------------------------------------------------------------------ Quellen
@@ -980,33 +1117,35 @@
     const [src, de] = await Promise.all([load("data/sources.json"), load("data/de/summary.json")]);
     const kv = (k, val) => [h("dt", null, k), h("dd", null, val)];
     const list = h("ol", { class: "source-list" }, src.sources.map(x => h("li", null,
-      h("strong", null, x.title), " ", chip(x.kind === "amtlich" ? "official" : "intl", x.kind === "amtlich" ? "amtlich" : "international"),
-      h("div", { class: "muted" }, x.publisher),
-      h("p", null, x.used_for),
+      h("strong", null, EN() && x.title_en ? x.title_en : x.title), " ", chip(x.kind === "amtlich" ? "official" : "intl", x.kind === "amtlich" ? L("amtlich", "official") : L("international", "international")),
+      h("div", { class: "muted" }, tr(x.publisher)),
+      h("p", null, EN() && x.used_for_en ? x.used_for_en : x.used_for),
       h("dl", { class: "kv" },
-        kv("Seite", h("a", { href: x.landing, rel: "noopener" }, x.landing)),
-        kv("Datei", h("a", { href: x.download, rel: "noopener" }, x.download)),
-        x.retrieval ? kv("Abgerufen", x.retrieval.retrieved.replace("T", " ").replace("+00:00", " UTC")) : null,
+        kv(L("Seite", "Page"), h("a", { href: x.landing, rel: "noopener" }, x.landing)),
+        kv(L("Datei", "File"), h("a", { href: x.download, rel: "noopener" }, x.download)),
+        x.retrieval ? kv(L("Abgerufen", "Retrieved"), x.retrieval.retrieved.replace("T", " ").replace("+00:00", " UTC")) : null,
         x.retrieval ? kv("SHA-256", x.retrieval.sha256) : null,
-        x.retrieval ? kv("Kopie im Repository", "data/raw/" + x.retrieval.file) : null))));
+        x.retrieval ? kv(L("Kopie im Repository", "Copy in repository"), "data/raw/" + x.retrieval.file) : null))));
     const periods = (await load("data/de/years/1990.json")).context;
     app.replaceChildren(h("div", { class: "doc" },
-      h("h1", null, "Quellen"),
-      h("p", null, "Alle Rohdateien liegen unverändert im Repository (data/raw/) und sind über Abrufzeit und SHA-256 eindeutig bestimmt. ",
-        "Die aufbereiteten Einzelemissionen mit allen Rechenergebnissen gibt es als CSV: ", h("a", { href: "data/de/de_emissionen.csv", download: "" }, "Deutschland"), " · ", h("a", { href: "data/us/us_auctions.csv", download: "" }, "Vereinigte Staaten"), "."),
+      h("h1", null, L("Quellen", "Sources")),
+      h("p", null, L("Alle Rohdateien liegen unverändert im Repository (data/raw/) und sind über Abrufzeit und SHA-256 eindeutig bestimmt. ", "All raw files are stored unchanged in the repository (data/raw/) and uniquely identified by retrieval time and SHA-256. "),
+        L("Die aufbereiteten Einzelemissionen mit allen Rechenergebnissen gibt es als CSV: ", "The processed individual issues with all results are available as CSV: "),
+        h("a", { href: "data/de/de_emissionen.csv", download: "" }, L("Deutschland", "Germany")), " · ", h("a", { href: "data/us/us_auctions.csv", download: "" }, L("Vereinigte Staaten", "United States")), "."),
       list,
-      h("h2", null, "Deutschland: Abgrenzung, Währung, Gebietsstand"),
-      h("p", null, de.scope),
-      h("p", { class: "muted" }, `Beispiel 1990: ${periods.territory}. ${periods.state}`),
-      h("p", null, "Die Angaben je Jahr erscheinen in der Jahresansicht im Kasten über den Kennzahlen."),
-      h("h2", null, "Inflationsindexierte Bundeswertpapiere – amtliche Stammdaten"),
-      h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, ["ISIN", "Kupon", "Zinsen ab", "1. Kupon", "Fälligkeit"].map(x => h("th", null, x)))),
+      h("h2", null, L("Deutschland: Abgrenzung, Währung, Gebietsstand", "Germany: scope, currency, territory")),
+      h("p", null, EN() && de.scope_en ? de.scope_en : de.scope),
+      h("p", { class: "muted" }, L("Beispiel 1990: ", "Example 1990: ") + `${tr(periods.territory)}. ${tr(periods.state)}`),
+      h("p", null, L("Die Angaben je Jahr erscheinen in der Jahresansicht im Kasten über den Kennzahlen.", "The details per year appear in the year view in the box above the key figures.")),
+      h("h2", null, L("Inflationsindexierte Bundeswertpapiere – amtliche Stammdaten", "Inflation-linked federal securities – official master data")),
+      h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, [L("ISIN", "ISIN"), L("Kupon", "Coupon"), L("Zinsen ab", "Interest from"), L("1. Kupon", "First coupon"), L("Fälligkeit", "Maturity")].map(x => h("th", null, x)))),
         h("tbody", null, Object.entries(src.ilb_meta).map(([k, m]) => h("tr", null, h("td", null, k), h("td", null, m["Kupon"] || "–"), h("td", null, m["Zinsen ab"] || "–"), h("td", null, m["1. Kupon"] || "–"), h("td", null, m["Fälligkeit"] || "–")))))),
-      h("h2", null, "Geprüft, aber noch nicht importiert"),
-      h("ul", null, src.candidates.map(c => h("li", null, h("strong", null, c.country + ": "), h("a", { href: c.url, rel: "noopener" }, c.title), " – ", c.note))),
-      h("h2", null, "Warum Schuldenstand und Zinssummen nicht reichen"),
-      h("p", null, "Ein Schuldenstand sagt nicht, zu welchem Kurs, mit welchem Kupon und bis wann die Kredite eines Jahres laufen. Die jährliche Zinssumme vermischt alle Jahrgänge. Beide Reihen werden deshalb nur als Vergleichs- und Kontextzahl gezeigt – mit sichtbarem Status."),
-      h("p", { class: "muted" }, "Datenstand der Website: " + dateDe(src.built) + ". Letzte Emission im Datensatz: " + dateDe(de.last_auction) + ".")));
+      h("h2", null, L("Geprüft, aber noch nicht importiert", "Checked but not yet imported")),
+      h("ul", null, src.candidates.map(c => h("li", null, h("strong", null, c.country + ": "), h("a", { href: c.url, rel: "noopener" }, c.title), " – ", tr(c.note)))),
+      h("h2", null, L("Warum Schuldenstand und Zinssummen nicht reichen", "Why debt levels and interest totals are not enough")),
+      h("p", null, L("Ein Schuldenstand sagt nicht, zu welchem Kurs, mit welchem Kupon und bis wann die Kredite eines Jahres laufen. Die jährliche Zinssumme vermischt alle Jahrgänge. Beide Reihen werden deshalb nur als Vergleichs- und Kontextzahl gezeigt – mit sichtbarem Status.",
+        "A debt level does not say at what price, with what coupon and until when the borrowing of a year runs. The annual interest total mixes all vintages. Both series are therefore only shown as comparison and context figures – with a visible status.")),
+      h("p", { class: "muted" }, L("Datenstand der Website: ", "Data as of: ") + dateDe(src.built) + L(". Letzte Emission im Datensatz: ", ". Latest issue in the data set: ") + dateDe(de.last_auction) + ".")));
   }
 
   // ------------------------------------------------------------------ Methode (Markdown)
@@ -1046,7 +1185,7 @@
   }
 
   async function viewMethod() {
-    const r = await fetch("METHODE.md", { cache: "no-cache" });
+    const r = await fetch(EN() ? "METHOD_EN.md" : "METHODE.md", { cache: "no-cache" });
     const text = await r.text();
     const div = h("div", { class: "doc" });
     div.innerHTML = md(text); // eigener, im Repository versionierter Text; HTML wird vorher maskiert
@@ -1054,70 +1193,83 @@
   }
 
   // ------------------------------------------------------------------ Prüfung
+  const GROUP_EN = { "Kuponanleihen": "Coupon bonds", "ILB (real)": "Inflation-linked (real)", "Bubill": "Bubill", "USD": "USD" };
+  const groupLabel = k => {
+    if (!EN()) return k;
+    return GROUP_EN[k] || k.replace("Kurs aus Diskontsatz", "price from discount rate").replace("Kurs veröffentlicht", "price published");
+  };
+
   async function viewVerification() {
     const v = await load("data/de/verification.json");
     const bt = (await load("data/de/summary.json")).model_backtest;
     const btBox = h("div", { class: "chart" });
-    const yRows = Object.entries(v.yields).map(([k, x]) => h("tr", null, h("td", null, k), h("td", { class: "r" }, String(x.n)),
-      h("td", { class: "r" }, nf1.format(x.share * 100) + " %"), h("td", { class: "r" }, nf3.format(x.median_abs_diff)), h("td", { class: "r" }, nf3.format(x.max_abs_diff))));
+    CUR = "EUR";
+    const yRows = Object.entries(v.yields).map(([k, x]) => h("tr", null, h("td", null, groupLabel(k)), h("td", { class: "r" }, String(x.n)),
+      h("td", { class: "r" }, pctNum(x.share * 100, nf1)), h("td", { class: "r" }, nf3.format(x.median_abs_diff)), h("td", { class: "r" }, nf3.format(x.max_abs_diff))));
     const cov = Object.entries(v.coverage);
     const box = h("div", { class: "chart" });
+    const pp = L("%-Pkt.", "pp");
     app.replaceChildren(h("div", { class: "doc" },
-      h("h1", null, "Prüfung der Zahlungsströme gegen die Emissionsdaten"),
-      h("p", { class: "muted" }, "Deutschland (Abschnitte 1–6), danach Vereinigte Staaten."),
-      h("p", null, `Automatisch erzeugt mit python -m pipeline.verify am ${dateDe(v.checked)}.`),
-      h("h2", null, "1. Rendite-Nachrechnung"),
-      h("p", null, "Aus Kurs, Kupon, Valuta, Stückzinsen und Kuponkalender wird für jede Emission die Rendite nachgerechnet und mit der veröffentlichten Durchschnittsrendite verglichen. Stimmen Kalender und Zahlungsströme, liegt die Abweichung innerhalb der Rundung der Veröffentlichung (±0,005 %-Punkte; Bubills: Geldmarktrendite act/360)."),
-      h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, "Gruppe"), h("th", { class: "r" }, "Emissionen"), h("th", { class: "r" }, "innerhalb Rundung"), h("th", { class: "r" }, "Median |Δ| %-Pkt."), h("th", { class: "r" }, "Max |Δ| %-Pkt."))), h("tbody", null, yRows))),
-      v.yield_outliers.length ? h("details", { class: "table-view" }, h("summary", null, `Größte Abweichungen (${v.yield_outliers.length})`),
-        h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, ["Datum", "ISIN", "Art", "veröffentlicht", "nachgerechnet", "Δ"].map(x => h("th", null, x)))),
+      h("h1", null, L("Prüfung der Zahlungsströme gegen die Emissionsdaten", "Checking the cash flows against the issuance data")),
+      h("p", { class: "muted" }, L("Deutschland (Abschnitte 1–6), danach Vereinigte Staaten.", "Germany (sections 1–6), followed by the United States.")),
+      h("p", null, L(`Automatisch erzeugt mit python -m pipeline.verify am ${dateDe(v.checked)}.`, `Generated automatically with python -m pipeline.verify on ${dateDe(v.checked)}.`)),
+      h("h2", null, L("1. Rendite-Nachrechnung", "1. Yield recalculation")),
+      h("p", null, L("Aus Kurs, Kupon, Valuta, Stückzinsen und Kuponkalender wird für jede Emission die Rendite nachgerechnet und mit der veröffentlichten Durchschnittsrendite verglichen. Stimmen Kalender und Zahlungsströme, liegt die Abweichung innerhalb der Rundung der Veröffentlichung (±0,005 %-Punkte; Bubills: Geldmarktrendite act/360).",
+        "For every issue the yield is recalculated from price, coupon, settlement, accrued interest and coupon schedule and compared with the published average yield. If calendar and cash flows are right, the deviation lies within the rounding of the publication (±0.005 percentage points; Bubills: money-market yield act/360).")),
+      h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, L("Gruppe", "Group")), h("th", { class: "r" }, L("Emissionen", "Issues")), h("th", { class: "r" }, L("innerhalb Rundung", "within rounding")), h("th", { class: "r" }, `Median |Δ| ${pp}`), h("th", { class: "r" }, `Max |Δ| ${pp}`))), h("tbody", null, yRows))),
+      v.yield_outliers.length ? h("details", { class: "table-view" }, h("summary", null, L(`Größte Abweichungen (${v.yield_outliers.length})`, `Largest deviations (${v.yield_outliers.length})`)),
+        h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, [L("Datum", "Date"), "ISIN", L("Art", "Type"), L("veröffentlicht", "published"), L("nachgerechnet", "recalculated"), "Δ"].map(x => h("th", null, x)))),
           h("tbody", null, v.yield_outliers.map(o => h("tr", null, h("td", null, dateDe(o.date)), h("td", null, o.isin), h("td", null, o.instrument + " / " + o.method), h("td", { class: "r" }, pct(o.yield_pub)), h("td", { class: "r" }, pct(o.yield_calc)), h("td", { class: "r" }, nf2.format(o.diff)))))))) : null,
-      h("p", { class: "muted" }, "Restabweichungen von 0,01 %-Punkten entstehen durch Rundung (nachgerechnete Rendite auf zwei Stellen gerundet) oder eine abweichende tatsächliche Valuta."),
-      h("h2", null, "2. Kostenidentität"),
-      h("p", null, `${v.identity.n} Emissionen geprüft: Summe der Kostenkomponenten = Auszahlungen − Emissionserlös = Summe über Zahlungsjahre. Abweichungen: ${v.identity.failures}.`),
-      h("h2", null, "3. Volumenabgleich mit dem amtlichen Umlauf"),
-      h("p", null, `Für Wertpapiere, deren gesamte Emission in der Historie liegt, stimmt das kumulierte Emissionsvolumen an ${v.volumes.match} von ${v.volumes.n} Stichtagen (${nf1.format(v.volumes.share * 100)} %) auf ±1 Mio. € mit dem Umlauf laut Einzelaufstellung überein. Die Abweichungen betreffen Papiere der Jahre 1999–2002, die zusätzlich außerhalb der Auktionen (z. B. im Daueremissionsverfahren oder vor der ersten Auktion) begeben wurden.`),
-      h("details", { class: "table-view" }, h("summary", null, "Größte Abweichungen"), h("div", { class: "table-scroll" }, h("table", null,
-        h("thead", null, h("tr", null, ["ISIN", "Stichtag", "Emissionen kumuliert", "Umlauf", "Differenz"].map(x => h("th", null, x)))),
+      h("p", { class: "muted" }, L("Restabweichungen von 0,01 %-Punkten entstehen durch Rundung (nachgerechnete Rendite auf zwei Stellen gerundet) oder eine abweichende tatsächliche Valuta.", "Remaining deviations of 0.01 percentage points arise from rounding (recalculated yield rounded to two decimals) or a different actual settlement date.")),
+      h("h2", null, L("2. Kostenidentität", "2. Cost identity")),
+      h("p", null, L(`${v.identity.n} Emissionen geprüft: Summe der Kostenkomponenten = Auszahlungen − Emissionserlös = Summe über Zahlungsjahre. Abweichungen: ${v.identity.failures}.`, `${v.identity.n} issues checked: sum of cost components = payments − issue proceeds = sum over payment years. Deviations: ${v.identity.failures}.`)),
+      h("h2", null, L("3. Volumenabgleich mit dem amtlichen Umlauf", "3. Volume check against official amounts outstanding")),
+      h("p", null, L(`Für Wertpapiere, deren gesamte Emission in der Historie liegt, stimmt das kumulierte Emissionsvolumen an ${v.volumes.match} von ${v.volumes.n} Stichtagen (${nf1.format(v.volumes.share * 100)} %) auf ±1 Mio. € mit dem Umlauf laut Einzelaufstellung überein. Die Abweichungen betreffen Papiere der Jahre 1999–2002, die zusätzlich außerhalb der Auktionen (z. B. im Daueremissionsverfahren oder vor der ersten Auktion) begeben wurden.`,
+        `For securities whose entire issuance is in the history, the cumulative issue volume matches the amount outstanding according to the list of securities to within ±€1 m on ${v.volumes.match} of ${v.volumes.n} reference dates (${nf1.format(v.volumes.share * 100)}%). The deviations concern securities of 1999–2002 that were also issued outside auctions (e.g. as tap issues or before the first auction).`)),
+      h("details", { class: "table-view" }, h("summary", null, L("Größte Abweichungen", "Largest deviations")), h("div", { class: "table-scroll" }, h("table", null,
+        h("thead", null, h("tr", null, ["ISIN", L("Stichtag", "Reference date"), L("Emissionen kumuliert", "Issues cumulative"), L("Umlauf", "Outstanding"), L("Differenz", "Difference")].map(x => h("th", null, x)))),
         h("tbody", null, v.volumes.largest_differences.map(d => h("tr", null, h("td", null, d.isin), h("td", null, dateDe(d.date)), h("td", { class: "r" }, money(d.emissions_cum)), h("td", { class: "r" }, money(d.outstanding)), h("td", { class: "r" }, money(d.diff)))))))),
-      h("h2", null, "4. Konsistenz je Zeile"),
-      h("p", null, `Emissionsvolumen = Zuteilung + Marktpflegequote: ${v.row_volumes.n - v.row_volumes.inconsistent} von ${v.row_volumes.n} Zeilen stimmen. Die übrigen (vor allem 1999–2002) weisen eine Zuteilung aus, die vom geplanten Volumen abweicht; berechnet wird stets mit der Zuteilung.`),
-      h("h2", null, "5. Abdeckung der amtlichen Bruttokreditaufnahme"),
-      h("p", null, "Anteil der zugeteilten Emissionen an der Bruttokreditaufnahme laut Schuldenbericht. Der Rest: Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente, Geldmarktkredite."),
+      h("h2", null, L("4. Konsistenz je Zeile", "4. Row consistency")),
+      h("p", null, L(`Emissionsvolumen = Zuteilung + Marktpflegequote: ${v.row_volumes.n - v.row_volumes.inconsistent} von ${v.row_volumes.n} Zeilen stimmen. Die übrigen (vor allem 1999–2002) weisen eine Zuteilung aus, die vom geplanten Volumen abweicht; berechnet wird stets mit der Zuteilung.`,
+        `Issue volume = allotment + retention: ${v.row_volumes.n - v.row_volumes.inconsistent} of ${v.row_volumes.n} rows match. The others (mainly 1999–2002) show an allotment that differs from the planned volume; calculations always use the allotment.`)),
+      h("h2", null, L("5. Abdeckung der amtlichen Bruttokreditaufnahme", "5. Coverage of official gross borrowing")),
+      h("p", null, L("Anteil der zugeteilten Emissionen an der Bruttokreditaufnahme laut Schuldenbericht. Der Rest: Verkäufe aus dem Eigenbestand, nicht auktionierte Instrumente, Geldmarktkredite.", "Share of allotted issues in gross borrowing according to the debt report. The rest: sales from own holdings, instruments not sold at auction, money-market loans.")),
       box,
-      tableView("Als Tabelle anzeigen", [{ t: "Jahr" }, { t: "zugeteilt", r: 1 }, { t: "amtl. Bruttokreditaufnahme", r: 1 }, { t: "Anteil", r: 1 }],
-        cov.map(([y, x]) => [y + (x.complete_year ? "" : " (unvollständig)"), money(x.allotted), money(x.gross_official), nf0.format(x.share * 100) + " %"])),
-      h("h2", null, "6. Rückrechnung des Modells für die Jahre vor 1999"),
-      h("p", null, "Für 1960–1998 gibt es keine Einzelemissionen. Die Zinslast wird dort aus Bundesbank-Aggregaten modelliert (Brutto-Absatz × Emissionsrendite × Laufzeitannahme). ",
-        "Um die Güte zu prüfen, wird dasselbe Modell auf die Jahre ab 1999 angewendet und mit den exakt aus Einzelemissionen berechneten Werten verglichen."),
-      bt.normal_years ? h("p", null, h("strong", null, `${bt.normal_years[0]}–${bt.normal_years[1]}: exakter Wert in ${bt.normal_in_band} von ${bt.normal_n} Jahren innerhalb der Modellspanne.`),
-        " Der Mittelwert des Modells liegt meist darüber (u. a., weil die Bundesbank-Summen ab 2000 auch Geldmarktpapiere enthalten). Bei Renditen nahe null oder negativ (ab 2015) ist das Modell unbrauchbar; vor 1999 lagen die Renditen zwischen etwa 4 und 10 %.") : null,
-      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), "exakt aus Einzelemissionen"),
-        h("span", null, h("span", { class: "key dot", style: "background:var(--series-2)" }), "Modell Mitte; Linie = Modellspanne")),
+      tableView(asTable(), [{ t: L("Jahr", "Year") }, { t: L("zugeteilt", "allotted"), r: 1 }, { t: L("amtl. Bruttokreditaufnahme", "official gross borrowing"), r: 1 }, { t: L("Anteil", "Share"), r: 1 }],
+        cov.map(([y, x]) => [y + (x.complete_year ? "" : L(" (unvollständig)", " (incomplete)")), money(x.allotted), money(x.gross_official), pctNum(x.share * 100, nf0)])),
+      h("h2", null, L("6. Rückrechnung des Modells für die Jahre vor 1999", "6. Back-test of the model for the years before 1999")),
+      h("p", null, L("Für 1960–1998 gibt es keine Einzelemissionen. Die Zinslast wird dort aus Bundesbank-Aggregaten modelliert (Brutto-Absatz × Emissionsrendite × Laufzeitannahme). ", "For 1960–1998 there are no individual issues. The interest burden is modelled there from Bundesbank aggregates (gross sales × issue yield × term assumption). "),
+        L("Um die Güte zu prüfen, wird dasselbe Modell auf die Jahre ab 1999 angewendet und mit den exakt aus Einzelemissionen berechneten Werten verglichen.", "To check its quality, the same model is applied to the years from 1999 and compared with the values calculated exactly from individual issues.")),
+      bt.normal_years ? h("p", null, h("strong", null, L(`${bt.normal_years[0]}–${bt.normal_years[1]}: exakter Wert in ${bt.normal_in_band} von ${bt.normal_n} Jahren innerhalb der Modellspanne.`, `${bt.normal_years[0]}–${bt.normal_years[1]}: exact value within the model range in ${bt.normal_in_band} of ${bt.normal_n} years.`)),
+        L(" Der Mittelwert des Modells liegt meist darüber (u. a., weil die Bundesbank-Summen ab 2000 auch Geldmarktpapiere enthalten). Bei Renditen nahe null oder negativ (ab 2015) ist das Modell unbrauchbar; vor 1999 lagen die Renditen zwischen etwa 4 und 10 %.",
+          " The model's midpoint is usually higher (partly because the Bundesbank totals include money-market paper from 2000). With yields near zero or negative (from 2015) the model is unusable; before 1999 yields were roughly between 4 and 10%.")) : null,
+      h("div", { class: "legend" }, h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L("exakt aus Einzelemissionen", "exact from individual issues")),
+        h("span", null, h("span", { class: "key dot", style: "background:var(--series-2)" }), L("Modell Mitte; Linie = Modellspanne", "model midpoint; line = model range"))),
       btBox,
-      tableView("Als Tabelle anzeigen", [{ t: "Jahr" }, { t: "exakt berechnet", r: 1 }, { t: "Modell tief", r: 1 }, { t: "Modell Mitte", r: 1 }, { t: "Modell hoch", r: 1 }, { t: "in Spanne" }],
-        bt.rows.map(r => [String(r.year), money(r.exact), money(r.low), money(r.mid), money(r.high), r.in_band ? "ja" : "nein"]))));
+      tableView(asTable(), [{ t: L("Jahr", "Year") }, { t: L("exakt berechnet", "calculated exactly"), r: 1 }, { t: L("Modell tief", "model low"), r: 1 }, { t: L("Modell Mitte", "model mid"), r: 1 }, { t: L("Modell hoch", "model high"), r: 1 }, { t: L("in Spanne", "in range") }],
+        bt.rows.map(r => [String(r.year), money(r.exact), money(r.low), money(r.mid), money(r.high), r.in_band ? L("ja", "yes") : L("nein", "no")]))));
     queueMicrotask(() => cleanups.push(barChart(btBox, {
       cats: bt.rows.map(r => r.year), stacks: [{ color: "var(--series-1)", values: bt.rows.map(r => r.exact) }],
       whisker: { lo: bt.rows.map(r => r.low), hi: bt.rows.map(r => r.high) }, dots: { values: bt.rows.map(r => r.mid), color: "var(--series-2)" }, height: 220, xEvery: 5,
-      tooltip: i => { const r = bt.rows[i]; return { head: String(r.year), rows: [{ color: "var(--series-1)", value: money(r.exact), label: "exakt berechnet" }, { color: "var(--series-2)", value: money(r.mid), label: `Modell Mitte (Spanne ${money(r.low)} – ${money(r.high)})` }] }; },
+      tooltip: i => { const r = bt.rows[i]; return { head: String(r.year), rows: [{ color: "var(--series-1)", value: money(r.exact), label: L("exakt berechnet", "calculated exactly") }, { color: "var(--series-2)", value: money(r.mid), label: L(`Modell Mitte (Spanne ${money(r.low)} – ${money(r.high)})`, `model midpoint (range ${money(r.low)} – ${money(r.high)})`) }] }; },
     })));
     const us = await load("data/us/verification.json").catch(() => null);
     if (us) {
       const doc = app.querySelector(".doc");
-      doc.append(h("h2", null, "Vereinigte Staaten: Rendite-Nachrechnung und Kostenidentität"),
-        h("p", null, `${nf0.format(us.n)} Auktionen (FiscalData, ab 1979). Für ${nf0.format(us.price_from_yield)} ältere Notes/Bonds ohne veröffentlichten Kurs wurde der Kurs aus der Rendite berechnet; diese sind von der Nachrechnung ausgenommen (zirkulär). `,
-          "TIPS: Der veröffentlichte Kurs ist mit der Index-Verhältniszahl multipliziert; nachgerechnet wird mit dem realen Kurs. Bills bis etwa 1995: Rendite nur zweistellig veröffentlicht."),
-        h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, "Gruppe"), h("th", { class: "r" }, "Auktionen"), h("th", { class: "r" }, "innerhalb Rundung"), h("th", { class: "r" }, "Toleranz %-Pkt."), h("th", { class: "r" }, "Max |Δ|"))),
-          h("tbody", null, Object.entries(us.yields).map(([k, x]) => h("tr", null, h("td", null, k), h("td", { class: "r" }, nf0.format(x.n)), h("td", { class: "r" }, nf1.format(x.share * 100) + " %"), h("td", { class: "r" }, String(x.tolerance_pp).replace(".", ",")), h("td", { class: "r" }, nf3.format(x.max_abs_diff))))))),
-        h("p", null, `Kostenidentität: ${nf0.format(us.identity.n)} Emissionen, Abweichungen: ${us.identity.failures}. Status der Emissionen: `,
-          Object.entries(us.status_counts).map(([k, n]) => `${(STATUS[k] || STATUS.none).label}: ${nf0.format(n)}`).join(" · "), "."));
+      doc.append(h("h2", null, L("Vereinigte Staaten: Rendite-Nachrechnung und Kostenidentität", "United States: yield recalculation and cost identity")),
+        h("p", null, L(`${nf0.format(us.n)} Auktionen (FiscalData, ab 1979). Für ${nf0.format(us.price_from_yield)} ältere Notes/Bonds ohne veröffentlichten Kurs wurde der Kurs aus der Rendite berechnet; diese sind von der Nachrechnung ausgenommen (zirkulär). `,
+          `${nf0.format(us.n)} auctions (FiscalData, from 1979). For ${nf0.format(us.price_from_yield)} older notes/bonds without a published price, the price was calculated from the yield; these are excluded from the recalculation (circular). `),
+          L("TIPS: Der veröffentlichte Kurs ist mit der Index-Verhältniszahl multipliziert; nachgerechnet wird mit dem realen Kurs. Bills bis etwa 1995: Rendite nur zweistellig veröffentlicht.", "TIPS: the published price is multiplied by the index ratio; recalculation uses the real price. Bills until around 1995: yield published to two decimals only.")),
+        h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, L("Gruppe", "Group")), h("th", { class: "r" }, L("Auktionen", "Auctions")), h("th", { class: "r" }, L("innerhalb Rundung", "within rounding")), h("th", { class: "r" }, L("Toleranz %-Pkt.", "Tolerance pp")), h("th", { class: "r" }, "Max |Δ|"))),
+          h("tbody", null, Object.entries(us.yields).map(([k, x]) => h("tr", null, h("td", null, groupLabel(k)), h("td", { class: "r" }, nf0.format(x.n)), h("td", { class: "r" }, pctNum(x.share * 100, nf1)), h("td", { class: "r" }, EN() ? String(x.tolerance_pp) : String(x.tolerance_pp).replace(".", ",")), h("td", { class: "r" }, nf3.format(x.max_abs_diff))))))),
+        h("p", null, L(`Kostenidentität: ${nf0.format(us.identity.n)} Emissionen, Abweichungen: ${us.identity.failures}. Status der Emissionen: `, `Cost identity: ${nf0.format(us.identity.n)} issues, deviations: ${us.identity.failures}. Status of the issues: `),
+          Object.entries(us.status_counts).map(([k, n]) => `${statusLabel(k)}: ${nf0.format(n)}`).join(" · "), "."));
     }
     const complete = cov.filter(([, x]) => x.complete_year);
     queueMicrotask(() => cleanups.push(barChart(box, {
       cats: complete.map(([y]) => y), stacks: [{ color: "var(--series-1)", values: complete.map(([, x]) => x.share * 100) }], height: 200,
-      yFormat: t => nf0.format(t) + " %", xEvery: 5,
-      tooltip: i => ({ head: complete[i][0], rows: [{ color: "var(--series-1)", value: nf0.format(complete[i][1].share * 100) + " %", label: "Abdeckung" }] }),
+      yFormat: t => pctNum(t, nf0), xEvery: 5,
+      tooltip: i => ({ head: complete[i][0], rows: [{ color: "var(--series-1)", value: pctNum(complete[i][1].share * 100, nf0), label: L("Abdeckung", "coverage") }] }),
     })));
   }
 
@@ -1128,6 +1280,12 @@
     const next = cur === "dark" ? "light" : "dark";
     root.setAttribute("data-theme", next);
     try { localStorage.setItem("theme", next); } catch (e) { /* Speicher gesperrt */ }
+    route();
+  });
+  document.getElementById("langToggle").addEventListener("click", () => {
+    LANG = EN() ? "de" : "en";
+    try { localStorage.setItem("lang", LANG); } catch (e) { /* Speicher gesperrt */ }
+    setLocale();
     route();
   });
   route();
