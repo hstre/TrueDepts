@@ -42,7 +42,7 @@ cd site && python -m http.server 8000     # http://localhost:8000
 Die Seite ist rein statisch und kann auf jedem Webserver liegen. Öffentlich erreichbar über GitHub Pages
 (Modus „Deploy from a branch“, `main`, Wurzelverzeichnis): https://hstre.github.io/TrueDepts/ – die `index.html`
 im Hauptverzeichnis leitet auf `site/` weiter. `.github/workflows/check.yml` führt bei jedem Push Tests, Build und
-Prüfung aus.
+Prüfung aus und veröffentlicht dieselbe Struktur auch dann, wenn Pages auf „GitHub Actions“ steht.
 
 ## Ein weiteres Land ergänzen
 

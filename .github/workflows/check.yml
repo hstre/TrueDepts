@@ -1,4 +1,7 @@
-name: Prüfen
+name: Prüfen und veröffentlichen
+
+# Veröffentlicht das Repository-Wurzelverzeichnis auf GitHub Pages: index.html leitet auf site/ weiter.
+# Funktioniert gleich, egal ob Pages auf „GitHub Actions“ oder „Deploy from a branch (main, /)“ steht.
 
 on:
   push:
@@ -6,10 +9,14 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Veröffentlicht wird über GitHub Pages im Modus „Deploy from a branch“ (main, /):
-# index.html im Hauptverzeichnis leitet auf site/ weiter. Dieser Workflow prüft nur.
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -26,3 +33,23 @@ jobs:
         run: python -m pipeline.build
       - name: Zahlungsströme gegen Emissionsdaten prüfen
         run: python -m pipeline.verify
+      - name: Seite zusammenstellen
+        run: |
+          mkdir -p _pages
+          cp index.html .nojekyll _pages/
+          cp -r site _pages/site
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _pages
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
