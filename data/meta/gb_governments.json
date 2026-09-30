@@ -1,0 +1,30 @@
+{
+  "_hinweis": "Redaktionelle Zusammenstellung der britischen Regierungen (Amtsantritt des Premierministers bzw. Wechsel von der Koalition zur Alleinregierung) und der Schatzkanzler (Chancellor of the Exchequer) ab 1990, Stand Mitte 2026; spätere Wechsel sind nicht geprüft. Quelle zur Prüfung: https://www.gov.uk/government/history/past-prime-ministers und https://www.gov.uk/government/history/past-chancellors . Die Zuordnung einer Emission erfolgt nach dem Auktions- bzw. Tendertag. Die Emissionsplanung (DMO-Remit) legt das Finanzministerium jeweils für ein Haushaltsjahr (April bis März) fest.",
+  "_note_en": "Editorial compilation of UK governments (prime minister taking office, or change from coalition to single-party government) and Chancellors of the Exchequer from 1990, as of mid-2026; later changes have not been checked. Source for verification: https://www.gov.uk/government/history/past-prime-ministers and https://www.gov.uk/government/history/past-chancellors . An issue is assigned by its auction or tender date. The Treasury sets the issuance plan (DMO remit) for each fiscal year (April to March).",
+  "governments": [
+    {"id": "major", "from": "1990-11-28", "head": "John Major", "parties": "Konservative Partei"},
+    {"id": "blair", "from": "1997-05-02", "head": "Tony Blair", "parties": "Labour"},
+    {"id": "brown", "from": "2007-06-27", "head": "Gordon Brown", "parties": "Labour"},
+    {"id": "cameron1", "from": "2010-05-11", "head": "David Cameron", "parties": "Konservative Partei, Liberaldemokraten (Koalition)"},
+    {"id": "cameron2", "from": "2015-05-08", "head": "David Cameron", "parties": "Konservative Partei"},
+    {"id": "may", "from": "2016-07-13", "head": "Theresa May", "parties": "Konservative Partei"},
+    {"id": "johnson", "from": "2019-07-24", "head": "Boris Johnson", "parties": "Konservative Partei"},
+    {"id": "truss", "from": "2022-09-06", "head": "Liz Truss", "parties": "Konservative Partei"},
+    {"id": "sunak", "from": "2022-10-25", "head": "Rishi Sunak", "parties": "Konservative Partei"},
+    {"id": "starmer", "from": "2024-07-05", "head": "Keir Starmer", "parties": "Labour"}
+  ],
+  "finance_ministers": [
+    {"from": "1990-11-28", "name": "Norman Lamont"},
+    {"from": "1993-05-27", "name": "Kenneth Clarke"},
+    {"from": "1997-05-02", "name": "Gordon Brown"},
+    {"from": "2007-06-28", "name": "Alistair Darling"},
+    {"from": "2010-05-11", "name": "George Osborne"},
+    {"from": "2016-07-13", "name": "Philip Hammond"},
+    {"from": "2019-07-24", "name": "Sajid Javid"},
+    {"from": "2020-02-13", "name": "Rishi Sunak"},
+    {"from": "2022-07-05", "name": "Nadhim Zahawi"},
+    {"from": "2022-09-06", "name": "Kwasi Kwarteng"},
+    {"from": "2022-10-14", "name": "Jeremy Hunt"},
+    {"from": "2024-07-05", "name": "Rachel Reeves"}
+  ]
+}

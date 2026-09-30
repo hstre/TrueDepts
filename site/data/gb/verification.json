@@ -1,0 +1,105 @@
+{
+ "checked": "2026-09-30",
+ "yields": {
+  "Conventional vor Nov. 1998": {
+   "n": 2,
+   "within_rounding": 2,
+   "share": 1.0,
+   "median_abs_diff": 0.00145,
+   "max_abs_diff": 0.0017,
+   "tolerance_pp": 0.0051
+  },
+  "Conventional": {
+   "n": 984,
+   "within_rounding": 980,
+   "share": 0.9959,
+   "median_abs_diff": 2e-05,
+   "max_abs_diff": 0.00129,
+   "tolerance_pp": 0.0005
+  },
+  "Index-linked (real)": {
+   "n": 307,
+   "within_rounding": 307,
+   "share": 1.0,
+   "median_abs_diff": 2e-05,
+   "max_abs_diff": 0.0001,
+   "tolerance_pp": 0.0005
+  }
+ },
+ "yield_outliers": [
+  {
+   "date": "1999-09-28",
+   "isin": "5¾% Treasury Stock 2009",
+   "instrument": "Gilt",
+   "method": "AUK",
+   "yield_pub": 5.693905352809001,
+   "yield_calc": 5.6952,
+   "diff": 0.0013
+  },
+  {
+   "date": "2002-10-22",
+   "isin": "5% Treasury Stock 2014",
+   "instrument": "Gilt",
+   "method": "AUK",
+   "yield_pub": 4.770323,
+   "yield_calc": 4.7712,
+   "diff": 0.0009
+  },
+  {
+   "date": "2003-06-12",
+   "isin": "5% Treasury Stock 2014",
+   "instrument": "Gilt",
+   "method": "AUK",
+   "yield_pub": 4.104611,
+   "yield_calc": 4.1054,
+   "diff": 0.0008
+  },
+  {
+   "date": "2002-05-29",
+   "isin": "5% Treasury Stock 2025",
+   "instrument": "Gilt",
+   "method": "AUK",
+   "yield_pub": 5.1780420000000005,
+   "yield_calc": 5.1786,
+   "diff": 0.0006
+  }
+ ],
+ "cash": {
+  "n": 305,
+  "median_rel": 4.8e-05,
+  "within_0_01pct": 174,
+  "within_0_1pct": 292,
+  "max_rel": 0.00168,
+  "since_2015_within_0_01pct": 121,
+  "since_2015_n": 158
+ },
+ "identity": {
+  "n": 1293,
+  "failures": 0,
+  "examples": []
+ },
+ "fy2025_26": {
+  "auctions_paof": 232387.8,
+  "tenders": 21165.0,
+  "syndications": 50392.0,
+  "n_auctions": 64,
+  "official": {
+   "auctions_paof": 232388,
+   "tenders": 21165,
+   "syndications": 50392,
+   "n_auctions": 64,
+   "source": "DMO Gilt Annual Review 2025–26, Table 5 und 12"
+  }
+ },
+ "lines": {
+  "n": 161,
+  "fitted": 153,
+  "single_issue": 7
+ },
+ "status_counts": {
+  "calc": 1039,
+  "none": 47,
+  "proj": 254
+ },
+ "n": 1340
+}

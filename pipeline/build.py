@@ -24,6 +24,7 @@ from .de_import import (INSTRUMENT_LABEL, METHOD_LABEL, load_auctions, load_debt
                         load_index_ratios, load_securities)
 from .sources import CANDIDATES, SOURCES, SOURCES_EN
 from .us_import import INSTRUMENT_LABEL as US_INSTRUMENT_LABEL
+from .uk_import import INSTRUMENT_LABEL as GB_INSTRUMENT_LABEL, METHOD_LABEL_GB
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site" / "data"
@@ -382,12 +383,18 @@ def main():
     from .build_us import build_us
     us_info = build_us(today, intl)
 
+    # --- Vereinigtes Königreich ---
+    from .build_gb import build_gb
+    gb_info = build_gb(today, intl)
+
     # --- Länder, Quellen, internationale Reihen ---
     vintage = {"DE": {"from": 1999, "to": today.year, "source": "Finanzagentur (Einzelemissionen)",
                       "scope": "Bund (Zentralstaat) einschließlich über Bundeswertpapiere finanzierter Sondervermögen",
                       "model_from": 1960},
                "US": {"from": 1979, "to": today.year, "source": "U.S. Treasury, FiscalData (Einzelauktionen)",
-                      "scope": "Zentralregierung: marktfähige Treasury-Wertpapiere"}}
+                      "scope": "Zentralregierung: marktfähige Treasury-Wertpapiere"},
+               "GB": {"from": 1998, "to": today.year, "source": "UK Debt Management Office (Einzelauktionen und Tender)",
+                      "scope": "Zentralregierung: Gilts aus Auktionen und Tendern; Syndizierungen nur 2025–26"}}
     countries = []
     for code, c in sorted(intl.items(), key=lambda kv: kv[1]["name"]):
         countries.append({
@@ -406,7 +413,7 @@ def main():
                     | ({"title_en": SOURCES_EN[k][0], "used_for_en": SOURCES_EN[k][1]} if k in SOURCES_EN else {})
                     for k, v in SOURCES.items()],
         "candidates": CANDIDATES, "ilb_meta": ilb_meta, "built": today.isoformat(),
-        "instrument_labels": INSTRUMENT_LABEL | US_INSTRUMENT_LABEL, "method_labels": METHOD_LABEL,
+        "instrument_labels": INSTRUMENT_LABEL | US_INSTRUMENT_LABEL | GB_INSTRUMENT_LABEL, "method_labels": METHOD_LABEL | METHOD_LABEL_GB,
     })
     (SITE.parent / "METHODE.md").write_bytes((ROOT / "docs" / "METHODE.md").read_bytes())
     (SITE.parent / "METHOD_EN.md").write_bytes((ROOT / "docs" / "METHOD_EN.md").read_bytes())

@@ -1,0 +1,12 @@
+{
+  "country": "GB",
+  "name": "Vereinigtes Königreich",
+  "scope": "Zentralregierung (HM Treasury): Gilts aus Auktionen (einschließlich PAOF-Aufstockungen) und Tendern ab 1998 sowie die Syndizierungen des Haushaltsjahres 2025–26. Nicht enthalten: Syndizierungen vor April 2025 (seit 2005 ein erheblicher Teil der langen und inflationsindexierten Emissionen), Treasury Bills, National Savings & Investments sowie Schulden von Kommunen und Regionalregierungen. Ältere inflationsindexierte Gilts mit 8-Monats-Verzögerung (bis 2006 aufgestockt) sind im Volumen erfasst, ihr Zahlungsstrom aber nicht berechnet. Die Gesamtstaat-Werte des IWF schließen Kommunen ein.",
+  "scope_en": "Central government (HM Treasury): gilts from auctions (including PAOF top-ups) and tenders from 1998 plus the syndications of fiscal year 2025–26. Not included: syndications before April 2025 (since 2005 a substantial part of long and index-linked issuance), Treasury bills, National Savings & Investments, and debt of local and devolved governments. Older index-linked gilts with an 8-month lag (reopened until 2006) are counted in volume but their cash flows are not calculated. The IMF general government figures include local government.",
+  "periods": [
+    {"from": 1945, "to": 1997, "territory": "Vereinigtes Königreich", "currency": "Pfund Sterling",
+     "state": "Zentralregierung. Einzelemissionen vor 1998 liegen nicht maschinenlesbar vor."},
+    {"from": 1998, "to": 2100, "territory": "Vereinigtes Königreich", "currency": "Pfund Sterling",
+     "state": "Zentralregierung (HM Treasury); Emission durch das UK Debt Management Office (seit April 1998)"}
+  ]
+}

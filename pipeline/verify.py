@@ -174,6 +174,63 @@ def check_us():
     return identity["failures"]
 
 
+def check_gb():
+    """Vereinigtes Königreich: Anpassungsgüte der Renditen, Erlösabgleich der Linker, Kostenidentität,
+    Summenabgleich mit dem DMO Annual Review 2025–26."""
+    issues = load_issues("gb")
+    groups = defaultdict(list)
+    worst = []
+    for i in issues:
+        if i.get("yield_calc") is None or i.get("yield_pub") is None:
+            continue
+        d = abs(i["yield_calc"] - i["yield_pub"])
+        pre = i["date"] < "1998-11-01"
+        key = ("Index-linked (real)" if i["kind"] == "inflation_linked" else "Conventional") + (" vor Nov. 1998" if pre else "")
+        tol = 0.0051 if pre else 0.0005
+        groups[key].append((d, tol))
+        worst.append((d - tol, d, i))
+    summary = {k: {"n": len(v), "within_rounding": sum(d <= t for d, t in v), "share": round(sum(d <= t for d, t in v) / len(v), 4),
+                   "median_abs_diff": round(statistics.median(d for d, _ in v), 5), "max_abs_diff": round(max(d for d, _ in v), 5),
+                   "tolerance_pp": v[0][1]} for k, v in groups.items()}
+    worst.sort(key=lambda x: -x[0])
+    outliers = [{"date": i["date"], "isin": i["isin"], "instrument": i["instrument"], "method": i["method"],
+                 "yield_pub": i["yield_pub"], "yield_calc": i["yield_calc"], "diff": round(d, 4)} for over, d, i in worst[:25] if over > 0]
+    cc = [abs(i["cash_check"]) for i in issues if "cash_check" in i]
+    cash = {"n": len(cc), "median_rel": round(statistics.median(cc), 6) if cc else None,
+            "within_0_01pct": sum(x <= 1e-4 for x in cc), "within_0_1pct": sum(x <= 1e-3 for x in cc),
+            "max_rel": round(max(cc), 5) if cc else None,
+            "since_2015_within_0_01pct": sum(abs(i["cash_check"]) <= 1e-4 for i in issues if "cash_check" in i and i["date"] >= "2015"),
+            "since_2015_n": sum(1 for i in issues if "cash_check" in i and i["date"] >= "2015")}
+    identity = check_identity(issues)
+    fy = [i for i in issues if "2025-04-01" <= i["date"] <= "2026-03-31"]
+    agg = {"auctions_paof": round(sum(i["cash_pub"] for i in fy if i["method"] in ("AUK", "PAOF")), 1),
+           "tenders": round(sum(i["cash_pub"] for i in fy if i["method"] == "TEN"), 1),
+           "syndications": round(sum(i["cash_pub"] for i in fy if i["method"] == "SYN"), 1),
+           "n_auctions": sum(1 for i in fy if i["method"] in ("AUK", "PAOF")),
+           "official": {"auctions_paof": 232388, "tenders": 21165, "syndications": 50392, "n_auctions": 64,
+                        "source": "DMO Gilt Annual Review 2025–26, Table 5 und 12"}}
+    lines_csv = SITE / "gb" / "gb_gilt_lines.csv"
+    import csv
+    lines = list(csv.DictReader(open(lines_csv, encoding="utf-8")))
+    fitted = [l for l in lines if l["maturity"]]
+    single = sum(1 for l in fitted if l["n_fit"] == "1")
+    status = defaultdict(int)
+    for i in issues:
+        status[i["status"]] += 1
+    result = {"checked": dt.date.today().isoformat(), "yields": summary, "yield_outliers": outliers, "cash": cash,
+              "identity": identity, "fy2025_26": agg, "lines": {"n": len(lines), "fitted": len(fitted), "single_issue": single},
+              "status_counts": dict(status), "n": len(issues)}
+    (SITE / "gb" / "verification.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    print("Vereinigtes Königreich – Anpassung der Renditen (Fälligkeit aus Renditen abgeleitet):")
+    for k, v in summary.items():
+        print(f"   {k:32s} n={v['n']:5d}  innerhalb ±{v['tolerance_pp']}: {v['share']:.1%}  Max {v['max_abs_diff']:.5f}")
+    print(f"   Linker-Erlösabgleich: {cash['within_0_01pct']}/{cash['n']} innerhalb 0,01 %, Median {cash['median_rel']}")
+    print(f"   Haushaltsjahr 2025–26: Auktionen+PAOF {agg['auctions_paof']} (amtlich 232388), Tender {agg['tenders']} (21165), "
+          f"Syndizierungen {agg['syndications']} (50392)")
+    print(f"Vereinigtes Königreich – Kostenidentität: {identity['n']} Emissionen, {identity['failures']} Abweichungen")
+    return identity["failures"]
+
+
 def main():
     issues = load_issues()
     securities = load_securities()
@@ -198,7 +255,8 @@ def main():
     print("5. Abdeckung der amtlichen Bruttokreditaufnahme durch zugeteilte Emissionen:")
     print("   " + ", ".join(f"{y}: {v['share']:.0%}" for y, v in coverage.items()))
     us_fail = check_us()
-    return 1 if identity["failures"] or us_fail else 0
+    gb_fail = check_gb()
+    return 1 if identity["failures"] or us_fail or gb_fail else 0
 
 
 if __name__ == "__main__":

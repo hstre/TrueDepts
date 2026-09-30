@@ -10,6 +10,10 @@ einzelnen Emissionen, mit sichtbarem Status jeder Zahl („aus einzelnen Emissio
 Abdeckung (G20):
 - **Deutschland (Bund):** Einzelemissionen der Finanzagentur ab 1999; 1960–1998 modellierte Größenordnung aus Bundesbank-Aggregaten.
 - **Vereinigte Staaten (Treasury):** alle Auktionen seit 1979 (FiscalData), einschließlich TIPS und FRN.
+- **Vereinigtes Königreich (HM Treasury):** Gilt-Auktionen und -Tender der DMO ab 1998, Syndizierungen nur 2025–26
+  (Untergrenze). Die DMO-Datenseiten sind durch ein Captcha geschützt: Die Dateien wurden im Browser exportiert und liegen
+  unter `data/raw/gb/`. Fälligkeitstage und Kupontermine sind aus den veröffentlichten Renditen abgeleitet (Zwischenspeicher
+  `data/processed/gb_gilt_lines.json`; die Neuberechnung dauert einige Minuten).
 - **Übrige G20:** gezahlte Zinsen des Zentralstaats (Weltbank) und Gesamtstaat (IWF: Nettozinsen, Schulden in % des BIP);
   keine Jahrgangswerte, weil Einzelemissionen (noch) nicht importiert sind. Amtliche Quellen sind im Quellenverzeichnis vermerkt.
 
@@ -30,6 +34,8 @@ pipeline/de_import.py  liest die Excel-Dateien der Finanzagentur
 pipeline/bbk_import.py Bundesbank-Reihen (vor 1999, VGR-Zinsausgaben)
 pipeline/us_import.py  US-Treasury-Auktionen, TIPS-Referenz-CPI, FRN-Index
 pipeline/build_us.py   Website-Daten USA
+pipeline/uk_import.py  DMO-Gilts, RPI (ONS), Ableitung der Stammdaten aus Renditen
+pipeline/build_gb.py   Website-Daten Vereinigtes Königreich
 pipeline/bonds.py    Rechenkern: Kalender, Stückzinsen, Kuponpläne, Kosten, Renditen
 pipeline/build.py    erzeugt die JSON-Dateien der Website
 pipeline/verify.py   prüft die Zahlungsströme gegen die Emissionsdaten

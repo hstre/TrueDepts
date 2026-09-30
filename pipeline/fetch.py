@@ -70,7 +70,7 @@ def fetch(source_id, manifest):
 
 def main(argv):
     manifest = load_manifest()
-    ids = argv or [k for k, v in SOURCES.items() if v.get("download")]
+    ids = argv or [k for k, v in SOURCES.items() if v.get("download") and not v.get("manual")]
     for sid in ids:
         fetch(sid, manifest)
         MANIFEST.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

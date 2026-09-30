@@ -39,8 +39,9 @@ Fälligkeit. So wird sichtbar, welche Zahlungspflichten eine Regierung ihren Nac
 | IWF WEO (`GGXCNL_NGDP`, `GGXONLB_NGDP`, `GGXWDG_NGDP`) | Finanzierungssaldo, Primärsaldo, Bruttoschulden des Gesamtstaats in % des BIP | Gesamtstaat: Nettozinsen und Schuldenstand; nie für Jahrgangskosten |
 | Bundesbank, Kapitalmarktstatistik (BBSIS) | Monatlich: Brutto-Absatz von Bundesanleihen (ab 1948; nach Laufzeit bis/über 4 Jahre ab 1960), Emissions- und Umlaufsrendite von Bundeswertpapieren (ab 1960), Umlauf | Jahre vor 1999: amtliches Emissionsvolumen, Nettoabsatz, **modellierte** Größenordnung der Zinslast (4.9) |
 
-Für die USA siehe Abschnitt 7. Für weitere Länder sind die amtlichen Auktionsquellen im Quellenverzeichnis
-(`pipeline/sources.py`, Abschnitt `CANDIDATES`) vermerkt; importiert sind Deutschland und die USA.
+Für die USA und das Vereinigte Königreich siehe Abschnitt 7. Für weitere Länder sind die amtlichen Auktionsquellen im
+Quellenverzeichnis (`pipeline/sources.py`, Abschnitt `CANDIDATES`) vermerkt; importiert sind Deutschland, die USA und das
+Vereinigte Königreich.
 
 **Abgrenzung Deutschland:** Bund, d. h. Bundeshaushalt und die über Bundeswertpapiere finanzierten
 Sondervermögen. Nicht enthalten: Länder, Gemeinden, Sozialversicherung. Währung: Euro (ab 1999; vorher
@@ -239,7 +240,8 @@ Inflation ab November 2026.
    Daueremissionen, Geldmarktkredite) und durch Verkäufe aus dem Eigenbestand.
 
 Die Ergebnisse erscheinen auf der Website unter „Prüfung“. Für die USA werden Rendite-Nachrechnung und Kostenidentität
-ebenso geprüft.
+ebenso geprüft. Für das Vereinigte Königreich siehe 7.4 (die Renditeprüfung ist dort eine Anpassung, keine unabhängige
+Nachrechnung).
 
 ## 7. Länder, Staatsebenen und Vergleich (G20)
 
@@ -248,13 +250,15 @@ ebenso geprüft.
 |---|---|---|---|
 | Deutschland | ab 1999 berechnet (Finanzagentur); 1960–1998 modellierte Größenordnung | amtlich ab 1995, Weltbank davor | IWF; VGR-Zinsausgaben (amtlich) ab 1970 |
 | Vereinigte Staaten | ab 1979 berechnet (FiscalData, alle Auktionen) | amtlich (FiscalData) ab 2011, Weltbank davor | IWF |
+| Vereinigtes Königreich | ab 1998 berechnet (DMO: Auktionen, Tender; Syndizierungen nur 2025–26) – Untergrenze | Weltbank | IWF |
 | übrige G20 | keine – Quellen im Verzeichnis, Import nicht umgesetzt | Weltbank | IWF |
 
 Jede Zahl trägt ihren Status. Aus gesamten Zinszahlungen oder Schuldenständen werden für kein Land Jahrgangswerte abgeleitet.
 
 ### 7.2 Staatsebenen
 - **Zentralstaat:** Deutschland = Bund; USA = Bundesregierung (Treasury, nur marktfähige Wertpapiere; ohne intragouvernementale
-  Schulden wie die Treuhandfonds der Sozialversicherung). Die Jahrgangsberechnung betrifft immer nur diese Ebene.
+  Schulden wie die Treuhandfonds der Sozialversicherung); Vereinigtes Königreich = HM Treasury (Gilts; ohne Treasury Bills und
+  National Savings & Investments). Die Jahrgangsberechnung betrifft immer nur diese Ebene.
 - **Gesamtstaat:** zusätzlich Länder/Bundesstaaten, Gemeinden und (je nach Land) Sozialversicherung. Für alle G20 aus dem
   IWF World Economic Outlook: Nettozinsen = Primärsaldo − Finanzierungssaldo (% des BIP, abgeleitet; Zinsausgaben minus
   Zinseinnahmen) und Bruttoschulden (% des BIP). Die Zusammensetzung laut IWF-Metadaten und das Haushaltsjahr werden je Land
@@ -273,7 +277,36 @@ Jede Zahl trägt ihren Status. Aus gesamten Zinszahlungen oder Schuldenständen 
 - Zugeteiltes Volumen einschließlich Zuteilungen an die Federal Reserve (SOMA); ausgewiesen.
 - Brutto/Tilgungen werden aus den Auktionsdaten summiert; Tilgungen vor 2010 unvollständig (vor 1979 begebene Papiere fehlen).
 
-### 7.4 Vergleichsmaßstab
+### 7.4 Konventionen Vereinigtes Königreich
+- Quellen: DMO-Datenberichte „Outright Gilt Auctions“ (ab 1998, mit PAOF), „Gilt Tenders“ (ab 2008), „Other gilt operations“ und
+  die Syndizierungen des Haushaltsjahres 2025–26 aus dem Gilt Annual Review (Table 12). Die Datenseiten der DMO sind durch ein
+  Captcha geschützt; die Dateien wurden im Browser exportiert und liegen unverändert unter `data/raw/gb/`.
+- **Stammdaten abgeleitet:** Die Liste „Gilts in Issue“ (Fälligkeitstag, Kupontermine, erster Kupon) war nicht abrufbar. Für jedes
+  Gilt wird deshalb aus den veröffentlichten Renditen seiner Emissionen bestimmt, auf welchen Kalendertag des Fälligkeitsjahres
+  die Fälligkeit fällt und ob der Zinslauf mit der ersten erfassten Emission beginnt (kurzer oder langer erster Kupon) – gewählt
+  wird die Kombination mit der kleinsten Quadratsumme der Renditeabweichungen. Kupons halbjährlich an Tag und Monat der
+  Fälligkeit, act/act; Ex-Dividenden-Periode sieben Geschäftstage vor dem Kupon (negative Stückzinsen, der nächste Kupon entfällt).
+  Mit den abgeleiteten Daten werden 99,6 % der veröffentlichten Renditen konventioneller Gilts auf ±0,0005 %-Punkte getroffen.
+  Das ist eine **Anpassung, keine unabhängige Prüfung**; bei Gilts mit nur einer oder zwei Emissionen kann der Tag um einen oder
+  wenige Tage abweichen. Die Kosten ändern sich dadurch nur um wenige Tage Zinsen. Die abgeleiteten Stammdaten stehen als
+  `site/data/gb/gb_gilt_lines.csv` zur Prüfung bereit und werden ersetzt, sobald die DMO-Stammdaten vorliegen.
+- Valuta: Auktionstag + 1 Geschäftstag (England und Wales); Tender: Valuta laut DMO; Syndizierungen: + 1 Geschäftstag (Annahme).
+- Emissionserlös: Cash-Erlös laut DMO (sauber, ohne Stückzinsen) zuzüglich berechneter Stückzinsen. Bei Syndizierungen liegt der
+  Cash-Erlös rund 0,15–0,2 % unter Nominal × Emissionskurs – vermutlich die Konsortialprovision; sie zählt zu den Kosten.
+- Index-linked Gilts mit 3-Monats-Verzögerung (ab 2005): Referenz-RPI = RPI(m−3) + (Tag−1)/Tage(m) × (RPI(m−2) − RPI(m−3)),
+  Index-Verhältniszahl = Referenz-RPI(Valuta) / Referenz-RPI(Erstemission). Liegt die Erstemission nicht in den Daten, wird die
+  Basis aus dem Cash-Erlös der ersten erfassten Emission zurückgerechnet (ausgewiesen). Unabhängige Prüfung: Nominal × realer
+  Kurs × Index-Verhältniszahl trifft den veröffentlichten Cash-Erlös seit 2015 praktisch exakt, davor mit Abweichungen bis 0,17 %;
+  gerechnet wird deshalb mit dem veröffentlichten Erlös. Nach dem letzten veröffentlichten RPI: Projektion 0/2/4 % p. a.
+- Ältere Index-linked Gilts mit 8-Monats-Verzögerung (bis 2006 aufgestockt): Index-Basis nicht in den Daten → Volumen erfasst,
+  Kosten „keine ausreichenden Daten“.
+- Nicht gezählt: Emissionen direkt an die DMO (Sicherheiten für die Kassensteuerung), Umtausch- und Konversionsgeschäfte.
+- Keine Aufteilung in Anschlussfinanzierung und Nettokreditaufnahme: Tilgungen vor 1998 begebener Gilts und die Syndizierungen
+  fehlen, eine Aufteilung aus diesen Daten wäre verzerrt.
+- Unabhängiger Summenabgleich: Die Emissionen des Haushaltsjahres 2025–26 ergeben Auktionen + PAOF 232.388 Mio. £,
+  Tender 21.165 Mio. £ und Syndizierungen 50.392 Mio. £ – genau die Werte des DMO Annual Review (Table 5).
+
+### 7.5 Vergleichsmaßstab
 Beträge in Landeswährung sind zwischen Ländern und Jahrzehnten kaum vergleichbar. Deshalb zusätzlich:
 ```
 Kosten je 100 Erlös          = Finanzierungskosten bis Fälligkeit / Emissionserlös × 100   (über die gesamte Laufzeit)
@@ -283,7 +316,7 @@ je 100 und Laufzeitjahr      = Kosten je 100 Erlös / volumengewichtete Ø Laufz
 Lange Kredite können insgesamt mehr Zinsen kosten und trotzdem günstigere jährliche Konditionen haben; die Laufzeit steht deshalb
 immer neben dem Gesamtwert. US-Jahrgänge sind wegen der vielen Bills sehr kurzlaufend (Ø um 1–2 Jahre), deutsche Jahrgänge länger.
 
-### 7.5 Politische Zuordnung
+### 7.6 Politische Zuordnung
 Die Zuordnung zu Regierungen nach Emissionstag ist zeitlich, nicht rechtlich (Kreditermächtigung und Schuldenobergrenze liegen beim
 Parlament). Für eine Einordnung zeigt die Regierungsansicht zusätzlich das **Zinsniveau** der Amtszeit (Ø Emissionsrendite) und die
 **übernommenen Fälligkeiten** (Rückzahlungen in der Amtszeit aus Emissionen früherer Regierungen, nur erfasste Emissionen).
@@ -295,4 +328,6 @@ Parlament). Für eine Einordnung zeigt die Regierungsansicht zusätzlich das **Z
 - Verkäufe aus dem Eigenbestand (Marktpflege) und nicht auktionierte Instrumente fehlen in den Jahrgangskosten.
 - Zins- und Währungsswaps des Bundes sind nicht berücksichtigt.
 - Valuta ist angenommen (T+2); bei Syndikaten kann sie abweichen.
+- Vereinigtes Königreich: Stammdaten aus Renditen abgeleitet, Syndizierungen vor April 2025 und Treasury Bills fehlen, ältere
+  Linker mit 8-Monats-Verzögerung ohne Kosten; die Jahreswerte sind deshalb Untergrenzen (7.4).
 - Die ILB-Projektion ist ein Szenario, keine Prognose.

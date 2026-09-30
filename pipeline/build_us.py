@@ -99,6 +99,7 @@ def build_us(today: dt.date, intl: dict):
         general = {"weo": weo} if weo else None
         v = build_vintage(year, items, rep, wb_int, weo.get("debt") if weo else None, ctx, govs, today, last_auction,
                           refcpi.last, general=general, coverage_allowed=False)
+        v["country"] = "US"
         # Tatsächlich gezahlte Zinsen: FiscalData (periodengerecht) statt Kassenwerte
         if rep and rep.get("interest_cash") is not None:
             v["paid"] = {"status": OFFICIAL, "cash": rep["interest_cash"], "total": rep["interest_total"],

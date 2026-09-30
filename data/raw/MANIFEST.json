@@ -131,5 +131,51 @@
     "retrieved": "2026-09-30T20:51:52+00:00",
     "bytes": 364942,
     "sha256": "ac9967955197d15da934d7fab908923f70d85e2681b9fa402b931b1a1882e93c"
+  },
+  "gb_rpi": {
+    "file": "gb/ons_rpi_chaw.csv",
+    "url": "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/chaw/mm23",
+    "retrieved": "2026-09-30T22:23:52+00:00",
+    "bytes": 12683,
+    "sha256": "259a40ecc5d6594e6ab68e1b13a5c84432078aa531c170ea047dac5c7ad75b08"
+  },
+  "gb_annual_review": {
+    "file": "gb/dmo_annual_review_2025_26.pdf",
+    "url": "https://www.dmo.gov.uk/media/zvypwjss/gar2026.pdf",
+    "retrieved": "2026-09-30T22:23:53+00:00",
+    "bytes": 1823559,
+    "sha256": "94ad3b162e4ae1979334f6bca3918b916dfd4bf18541eadb1b196ea557511a71"
+  },
+  "gb_auctions": {
+    "file": "gb/dmo_outright_gilt_auctions.xls",
+    "url": "https://www.dmo.gov.uk/data/pdfdatareport?reportCode=D2.1A",
+    "retrieved": "2026-09-30T22:06:00+00:00",
+    "bytes": 276992,
+    "sha256": "4b45d253876fcebc2e9d8f9ba6faaa08bac4092e0537d09a63c22976fe53e3ed",
+    "note": "manueller Export im Browser (DMO-Datenseiten sind durch ein Captcha geschützt)"
+  },
+  "gb_tenders": {
+    "file": "gb/dmo_gilt_tenders.xls",
+    "url": "https://www.dmo.gov.uk/data/pdfdatareport?reportCode=D2.1PROF9",
+    "retrieved": "2026-09-30T22:06:00+00:00",
+    "bytes": 33280,
+    "sha256": "10f8173f803389faa0e9d1d3011a02f7d139356ecbbc50a79e36d50bbe17256c",
+    "note": "manueller Export im Browser (DMO-Datenseiten sind durch ein Captcha geschützt)"
+  },
+  "gb_other_ops": {
+    "file": "gb/dmo_other_gilt_operations.xls",
+    "url": "https://www.dmo.gov.uk/data/pdfdatareport?reportCode=D2.1PROF7",
+    "retrieved": "2026-09-30T22:06:00+00:00",
+    "bytes": 62464,
+    "sha256": "82c23a4f09301c17d390e71cffbb1ab8ab160b846491e31a114d68bbc1f915ae",
+    "note": "manueller Export im Browser (DMO-Datenseiten sind durch ein Captcha geschützt)"
+  },
+  "gb_syndications": {
+    "file": "gb/dmo_syndications_2025_26.csv",
+    "url": "https://www.dmo.gov.uk/media/zvypwjss/gar2026.pdf",
+    "retrieved": "2026-09-30T22:06:00+00:00",
+    "bytes": 514,
+    "sha256": "01e41b959e7ee18f8050b645d67c2f24cf4b05d255617ef9042b06a9343a7c69",
+    "note": "aus dem PDF des Annual Review abgeschrieben und geprüft"
   }
 }

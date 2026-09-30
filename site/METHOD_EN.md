@@ -41,8 +41,9 @@ obligations a government leaves to its successors.
 | IMF WEO (`GGXCNL_NGDP`, `GGXONLB_NGDP`, `GGXWDG_NGDP`) | Overall balance, primary balance, gross debt of general government in % of GDP | General government: net interest and debt; never used for vintage costs |
 | Bundesbank, capital market statistics (BBSIS) | Monthly: gross sales of federal bonds (from 1948; by maturity up to/over 4 years from 1960), issue and outstanding yields of federal securities (from 1960), amount outstanding | Years before 1999: official issue volume, net sales, **modelled** order of magnitude of the interest burden (4.9) |
 
-For the United States see section 7. For other countries, the official auction sources are listed in the source
-register (`pipeline/sources.py`, section `CANDIDATES`); Germany and the United States are imported.
+For the United States and the United Kingdom see section 7. For other countries, the official auction sources are listed
+in the source register (`pipeline/sources.py`, section `CANDIDATES`); Germany, the United States and the United Kingdom
+are imported.
 
 **Scope for Germany:** the federal level (Bund), i.e. the federal budget and the special funds financed through
 federal securities. Not included: Länder (states), municipalities, social security. Currency: euro (from 1999;
@@ -237,7 +238,8 @@ published.
    and by sales from own holdings.
 
 The results appear on the website under “Checks”. For the United States, yield recalculation and cost identity are
-checked in the same way.
+checked in the same way. For the United Kingdom see 7.4 (there the yield check is a fit, not an independent
+recalculation).
 
 ## 7. Countries, levels of government and comparison (G20)
 
@@ -246,6 +248,7 @@ checked in the same way.
 |---|---|---|---|
 | Germany | calculated from 1999 (Finance Agency); 1960–1998 modelled order of magnitude | official from 1995, World Bank before | IMF; national accounts interest expenditure (official) from 1970 |
 | United States | calculated from 1979 (FiscalData, all auctions) | official (FiscalData) from 2011, World Bank before | IMF |
+| United Kingdom | calculated from 1998 (DMO: auctions, tenders; syndications only 2025–26) – lower bound | World Bank | IMF |
 | other G20 | none – sources listed in the register, import not implemented | World Bank | IMF |
 
 Every figure carries its status. For no country are vintage figures derived from total interest payments or debt
@@ -253,7 +256,8 @@ levels.
 
 ### 7.2 Levels of government
 - **Central government:** Germany = Bund; United States = federal government (Treasury, marketable securities only;
-  excluding intragovernmental debt such as the Social Security trust funds). Vintage calculations always refer to
+  excluding intragovernmental debt such as the Social Security trust funds); United Kingdom = HM Treasury (gilts;
+  excluding Treasury bills and National Savings & Investments). Vintage calculations always refer to
   this level only.
 - **General government:** additionally states, municipalities and (depending on the country) social security. For
   all G20 from the IMF World Economic Outlook: net interest = primary balance − overall balance (% of GDP, derived;
@@ -275,7 +279,38 @@ levels.
 - Gross borrowing/redemptions are summed from the auction data; redemptions before 2010 are incomplete (securities
   issued before 1979 are missing).
 
-### 7.4 Comparison measures
+### 7.4 United Kingdom conventions
+- Sources: DMO data reports “Outright Gilt Auctions” (from 1998, with PAOF), “Gilt Tenders” (from 2008), “Other gilt
+  operations” and the syndications of fiscal year 2025–26 from the Gilt Annual Review (Table 12). The DMO data pages are
+  protected by a captcha; the files were exported in a browser and are stored unchanged under `data/raw/gb/`.
+- **Derived reference data:** the “Gilts in Issue” list (maturity date, coupon dates, first coupon) could not be retrieved.
+  For each gilt, the published yields of its issues are therefore used to determine on which calendar day of the maturity
+  year it matures and whether interest starts with the first issue covered (short or long first coupon) – the combination
+  with the smallest sum of squared yield deviations is chosen. Coupons semi-annually on the day and month of maturity,
+  act/act; ex-dividend period seven business days before the coupon (negative accrued interest, the next coupon is not
+  received). With the derived data, 99.6% of the published yields of conventional gilts are matched to ±0.0005 percentage
+  points. This is a **fit, not an independent check**; for gilts with only one or two issues the day may be off by one or a
+  few days, which changes the cost by only a few days' interest. The derived reference data are available as
+  `site/data/gb/gb_gilt_lines.csv` and will be replaced once the DMO reference data are available.
+- Settlement: auction date + 1 business day (England and Wales); tenders: settlement date according to the DMO;
+  syndications: + 1 business day (assumption).
+- Issue proceeds: cash raised according to the DMO (clean, excluding accrued interest) plus calculated accrued interest. For
+  syndications, cash raised is about 0.15–0.2% below nominal × issue price – presumably the syndicate commission; it counts
+  as a cost.
+- Index-linked gilts with a 3-month lag (from 2005): reference RPI = RPI(m−3) + (day−1)/days(m) × (RPI(m−2) − RPI(m−3)),
+  index ratio = reference RPI(settlement) / reference RPI(first issue). If the first issue is not in the data, the base is
+  backed out from the cash raised of the first issue covered (stated). Independent check: nominal × real price × index
+  ratio matches the published cash raised practically exactly since 2015, with deviations of up to 0.17% before; the
+  published proceeds are therefore used. After the last published RPI: projection 0/2/4% p.a.
+- Older index-linked gilts with an 8-month lag (reopened until 2006): index base not in the data → volume covered, cost
+  “insufficient data”.
+- Not counted: issuance directly to the DMO (collateral for cash management), switches and conversions.
+- No split into refinancing and net borrowing: redemptions of gilts issued before 1998 and the syndications are missing, so a
+  split from these data would be distorted.
+- Independent totals check: the issues of fiscal year 2025–26 add up to auctions + PAOF £232,388 m, tenders £21,165 m and
+  syndications £50,392 m – exactly the figures in the DMO Annual Review (Table 5).
+
+### 7.5 Comparison measures
 Amounts in local currency are hardly comparable across countries and decades. Therefore additionally:
 ```
 Cost per 100 of proceeds        = financing cost until maturity / issue proceeds × 100   (over the full term)
@@ -286,7 +321,7 @@ Long-term borrowing can cost more interest in total and still have cheaper annua
 always shown next to the total. US vintages are very short because of the many bills (average around 1–2 years),
 German vintages are longer.
 
-### 7.5 Political attribution
+### 7.6 Political attribution
 Assignment to governments by issue date is temporal, not legal (borrowing authority and the debt ceiling lie with
 parliament). To put it in context, the government view also shows the **interest-rate level** of the term (average
 issue yield) and the **inherited maturities** (redemptions during the term from issues by earlier governments,
@@ -299,4 +334,6 @@ covered issues only).
 - Sales from own holdings (market management) and instruments not sold at auction are missing from vintage costs.
 - Interest-rate and currency swaps of the federal government are not taken into account.
 - Settlement is assumed (T+2); it may differ for syndications.
+- United Kingdom: reference data derived from yields; syndications before April 2025 and Treasury bills are missing; older
+  linkers with an 8-month lag without cost. The annual figures are therefore lower bounds (7.4).
 - The inflation-linked projection is a scenario, not a forecast.

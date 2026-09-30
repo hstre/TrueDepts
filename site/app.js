@@ -57,6 +57,14 @@
         paidLegend: L("bis 2010 Weltbank, ab 2011 amtlich (FiscalData, periodengerecht)", "World Bank until 2010, official from 2011 (FiscalData, accrual basis)"),
         dataFrom: 1979,
       },
+      GB: {
+        govLabel: L("britische Regierung", "UK government"), govTitle: L("Britische Regierung", "UK government"),
+        govPlural: L("Regierung(en) im Jahr", "Government(s) in the year"),
+        scopeShort: L("Vereinigtes Königreich, Zentralregierung (HM Treasury)", "United Kingdom, central government (HM Treasury)"),
+        sourceRow: L("DMO-Datenbericht, Zeile", "DMO data report, row"),
+        paidLegend: L("Weltbank (Zentralstaat)", "World Bank (central government)"),
+        dataFrom: 1998,
+      },
     };
     return M[code];
   }
@@ -645,6 +653,7 @@
       card.append(h("p", null, chip("none"), L(` Für ${v.year} liegen keine Einzelemissionen vor. Die Zinslast dieses Jahrgangs wird deshalb nicht berechnet und nicht geschätzt.`,
         ` There are no individual issues for ${v.year}. The interest burden of this vintage is therefore neither calculated nor estimated.`)),
         h("p", { class: "muted" }, v.country === "US" ? L("Die Auktionsdaten von FiscalData beginnen 1979; ältere Einzelemissionen sind nicht maschinenlesbar erschlossen.", "FiscalData auction data begin in 1979; older individual issues are not available in machine-readable form.") :
+          v.country === "GB" ? L("Die Auktionsdaten des UK Debt Management Office beginnen 1998 (Gründung der DMO); ältere Gilt-Emissionen der Bank of England sind nicht maschinenlesbar erschlossen.", "The UK Debt Management Office auction data begin in 1998 (when the DMO was set up); older gilt issues by the Bank of England are not available in machine-readable form.") :
           v.year < 1949 ? L("In diesem Jahr gab es noch keinen Bund als Schuldner.", "In this year there was no federal government as a debtor yet.") :
           v.aggregate && v.aggregate.gross ? L("Die Bundesbank weist für dieses Jahr zwar das begebene Volumen aus, aber keine Emissionsrendite (erst ab 1960).", "The Bundesbank reports the volume issued for this year, but no issue yield (only from 1960).") :
           L("Die Emissionshistorie der Finanzagentur beginnt 1999. Für frühere Jahre müssten Emissionsdaten der Bundesschuldenverwaltung bzw. Bundesbank erschlossen werden.",
@@ -667,12 +676,14 @@
       band ? L(` (Spanne ${money(t.cost_low)} bis ${money(t.cost_high)}, davon fest ${money(t.cost_fixed)})`, ` (range ${money(t.cost_low)} to ${money(t.cost_high)}, of which fixed ${money(t.cost_fixed)})`) : "",
       L(". Dargestellt ist die Zinslast je Zahlungsjahr – ohne Tilgung, ohne spätere Anschlussfinanzierung.", ". Shown is the interest burden per payment year – excluding redemption and later refinancing."),
       v.coverage !== null && v.coverage !== undefined ? L(` Das ist eine Teilsumme: Die erfassten Emissionen decken ${nf0.format(v.coverage * 100)} % der amtlichen Bruttokreditaufnahme ab.`, ` This is a partial total: the covered issues account for ${nf0.format(v.coverage * 100)}% of official gross borrowing.`)
+        : v.country === "GB" ? L(" Das ist eine Untergrenze: Syndizierungen vor April 2025 und Treasury Bills fehlen.", " This is a lower bound: syndications before April 2025 and Treasury bills are missing.")
         : v.scope_note ? L(" Erfasst sind alle marktfähigen Wertpapiere aus Auktionen, nicht die gesamte Staatsverschuldung.", " Covers all marketable securities from auctions, not total government debt.")
         : L(" Das ist eine Teilsumme der Kreditaufnahme dieses Jahres.", " This is a partial total of this year's borrowing.")));
     card.append(h("div", { class: "legend" },
       h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L("feststehend (Kupons, Disagio/Agio, erhaltene Stückzinsen) ", "fixed (coupons, discount/premium, accrued interest received) "), chip("calc")),
       hasProj ? h("span", null, h("span", { class: "key proj" }), v.country === "US"
         ? L("abhängig von Inflation (TIPS) bzw. Geldmarktzins (FRN) – mittleres Szenario; Linie = Spanne der Szenarien ", "depends on inflation (TIPS) or money-market rate (FRN) – mid scenario; line = range of scenarios ")
+        : v.country === "GB" ? L("abhängig vom RPI (Index-linked Gilts) – mittleres Szenario 2 %; Linie = Spanne 0 % bis 4 % ", "depends on RPI (index-linked gilts) – mid scenario 2%; line = range 0% to 4% ")
         : L("abhängig von Inflation – mittleres Szenario 2 %; Linie = Spanne 0 % bis 4 % ", "depends on inflation – mid scenario 2%; line = range 0% to 4% "), chip("proj")) : null));
     const box = h("div", { class: "chart" });
     card.append(box);
@@ -798,7 +809,8 @@
     const kv = (k, val) => [h("dt", null, k), h("dd", null, val)];
     const cashKind = { "Emissionserlös": L("Emissionserlös", "Issue proceeds"), "Kupon": L("Kupon", "Coupon"), "Rückzahlung": L("Rückzahlung", "Redemption") };
     const parts = [h("dl", { class: "kv" },
-      kv(L("Wertpapier", "Security"), `${instLabel(sources, i.instrument)}, ${country.code === "US" ? "CUSIP" : "ISIN"} ${i.isin}`),
+      kv(L("Wertpapier", "Security"), country.code === "GB" ? `${i.isin} (${instLabel(sources, i.instrument)})` : `${instLabel(sources, i.instrument)}, ${country.code === "US" ? "CUSIP" : "ISIN"} ${i.isin}`),
+      i.maturity_source ? kv(L("Fälligkeit", "Maturity"), `${dateDe(i.maturity)} (${tr(i.maturity_source)})`) : null,
       kv(L("Verfahren", "Method"), `${methodLabel(sources, i.method)}${i.new ? L(" (Neuemission)", " (new issue)") : L(" (Aufstockung)", " (reopening)")}`),
       kv(L("Auktion / Valuta", "Auction / settlement"), `${dateDe(i.date)} / ${dateDe(i.settle)} (${i.settle_rule === "T+2" ? L("Annahme T+2 Geschäftstage", "assumption T+2 business days") : tr(i.settle_rule)})`),
       kv(L("Emissionsvolumen", "Issue volume"), L(`${money(i.issue_volume)}, davon zugeteilt ${money(i.allotted)}, Eigenbestand ${money(i.retained)}`, `${money(i.issue_volume)}, of which allotted ${money(i.allotted)}, own holdings ${money(i.retained)}`)),
@@ -807,9 +819,11 @@
       kv(L("Kurs / Rendite", "Price / yield"), L(`${i.price ?? "–"} % / veröffentlicht ${i.yield_pub ?? "–"} %, nachgerechnet ${i.yield_calc ?? "–"} %`, `${i.price ?? "–"}% / published ${i.yield_pub ?? "–"}%, recalculated ${i.yield_calc ?? "–"}%`)),
       i.proceeds !== undefined ? kv(L("Emissionserlös", "Issue proceeds"), L(`${money(i.proceeds)} (Kurswert ${money(i.clean_proceeds)} + Stückzinsen ${money(i.accrued)})`, `${money(i.proceeds)} (price value ${money(i.clean_proceeds)} + accrued interest ${money(i.accrued)})`)) : null,
       i.cost !== undefined ? kv(L("Kosten bis Fälligkeit", "Cost until maturity"), `${money(i.cost)}${i.cost_low !== i.cost_high ? L(` (Spanne ${money(i.cost_low)} – ${money(i.cost_high)}, fest ${money(i.cost_fixed)})`, ` (range ${money(i.cost_low)} – ${money(i.cost_high)}, fixed ${money(i.cost_fixed)})`) : ""}`) : null,
-      kv(country.code === "DE" ? L("Regierung / BMF", "Government / finance minister") : L("Regierung", "Government"), i.fm ? `${i.gov || "–"} / ${i.fm}` : (i.gov || "–")),
+      kv(country.code === "DE" ? L("Regierung / BMF", "Government / finance minister") : country.code === "GB" ? L("Regierung / Schatzkanzler", "Government / Chancellor") : L("Regierung", "Government"), i.fm ? `${i.gov || "–"} / ${i.fm}` : (i.gov || "–")),
       i.price_source ? kv(L("Kursquelle", "Price source"), tr(i.price_source)) : null,
       i.soma ? kv(L("davon Federal Reserve (SOMA)", "of which Federal Reserve (SOMA)"), money(i.soma)) : null,
+      i.paof ? kv("PAOF", L(`${money(i.paof)} Nominal zusätzlich zum Auktionskurs (Post-Auction Option Facility)`, `${money(i.paof)} nominal in addition at the auction price (Post-Auction Option Facility)`)) : null,
+      i.cash_pub !== undefined && i.cash_pub !== null ? kv(L("Cash-Erlös laut DMO", "Cash raised according to DMO"), L(`${money(i.cash_pub)} (ohne Stückzinsen)`, `${money(i.cash_pub)} (excluding accrued interest)`)) : null,
       kv(L("Quelle", "Source"), `${cmeta(country.code).sourceRow} ${i.row}`))];
     if (i.note) parts.push(h("p", { class: "note" }, tr(i.note)));
     if (i.cash) {
@@ -831,7 +845,19 @@
         `Coverage: the allotted issues correspond to ${nf0.format(v.coverage * 100)}% of official gross borrowing. The rest consists of sales from own holdings, instruments not sold at auction (e.g. federal savings bonds and financing notes until 2012, promissory notes, tap issues) and money-market loans.`));
       if (country.code === "DE") items.push(L("Zins- und Währungsswaps des Bundes sind nicht berücksichtigt.", "Interest-rate and currency swaps of the federal government are not taken into account."));
       if (v.issues.some(i => i.kind === "fixed_fx")) items.push(L("US-Dollar-Anleihen: modelliert zum Euro-Gegenwert der Emissionshistorie.", "US-dollar bonds: modelled at the euro equivalent stated in the issuance history."));
-      if (v.scope_note) items.push(tr(v.scope_note));
+      if (v.scope_note && country.code !== "GB") items.push(tr(v.scope_note));
+      if (country.code === "GB") {
+        items.push(L("Fälligkeitstag und Kupontermine sind aus den veröffentlichten Renditen abgeleitet, weil die DMO-Stammdaten (Gilts in Issue) nicht abrufbar waren. Die Renditen werden damit auf ±0,0005 %-Punkte getroffen; bei Gilts mit wenigen Emissionen kann der Tag um einen oder wenige Tage abweichen, die Kosten ändern sich dadurch nur geringfügig.",
+          "Maturity date and coupon dates are derived from the published yields because the DMO reference data (gilts in issue) could not be retrieved. The yields are matched to ±0.0005 percentage points; for gilts with few issues the day may be off by one or a few days, which changes the cost only marginally."));
+        items.push(L("Syndizierungen fehlen vor April 2025. Seit 2005 hat die DMO einen erheblichen Teil der langen und inflationsindexierten Gilts per Syndizierung begeben; 2025–26 waren es 50 von 304 Mrd. £.",
+          "Syndications are missing before April 2025. Since 2005 the DMO has sold a substantial part of long and index-linked gilts by syndication; in 2025–26 it was £50 bn of £304 bn."));
+        if (v.uncovered && v.uncovered.linker8) items.push(L(`${v.uncovered.linker8} Emission(en) älterer Index-linked Gilts mit 8-Monats-Verzögerung (${money(v.uncovered.linker8_nominal)} Nominal): Index-Basis nicht in den Daten, Kosten nicht berechnet – keine ausreichenden Daten.`,
+          `${v.uncovered.linker8} issue(s) of older index-linked gilts with an 8-month lag (${money(v.uncovered.linker8_nominal)} nominal): index base not in the data, cost not calculated – insufficient data.`));
+        if (v.issues.some(i => i.kind === "inflation_linked")) items.push(L("Index-linked Gilts: Index-Verhältniszahl aus dem RPI (ONS) mit 3 Monaten Verzögerung; ab 2030 wird der RPI methodisch an den CPIH angeglichen, was den künftigen Inflationsausgleich eher senkt. Die Szenarien 0/2/4 % decken das grob ab.",
+          "Index-linked gilts: index ratio from RPI (ONS) with a 3-month lag; from 2030 RPI will be aligned methodologically with CPIH, which tends to lower future indexation. The 0/2/4% scenarios cover this roughly."));
+        items.push(L("Nicht enthalten: Treasury Bills, National Savings & Investments, Kommunen und Regionalregierungen. Emissionen direkt an die DMO (Sicherheiten für die Kassensteuerung) sowie Umtausch- und Konversionsgeschäfte bringen keine Finanzierungsmittel und sind nicht gezählt.",
+          "Not included: Treasury bills, National Savings & Investments, local and devolved governments. Issuance directly to the DMO (collateral for cash management) and switches/conversions raise no financing and are not counted."));
+      }
       if (country.code === "US") {
         items.push(L("Kurzlaufende Bills werden mehrfach im Jahr erneuert; das zugeteilte Volumen eines Jahres ist deshalb viel größer als die Neuverschuldung.", "Short-term bills are rolled over several times a year; the volume allotted in a year is therefore much larger than new borrowing."));
         if (v.issues.some(i => i.soma)) items.push(L(`Enthalten sind Zuteilungen an die Federal Reserve (SOMA) von ${money(v.issues.reduce((a, i) => a + (i.soma || 0), 0))}: Die Notenbank ersetzt fällige Bestände; auch das ist Anschlussfinanzierung.`,
@@ -1136,7 +1162,10 @@
       h("h1", null, L("Quellen", "Sources")),
       h("p", null, L("Alle Rohdateien liegen unverändert im Repository (data/raw/) und sind über Abrufzeit und SHA-256 eindeutig bestimmt. ", "All raw files are stored unchanged in the repository (data/raw/) and uniquely identified by retrieval time and SHA-256. "),
         L("Die aufbereiteten Einzelemissionen mit allen Rechenergebnissen gibt es als CSV: ", "The processed individual issues with all results are available as CSV: "),
-        h("a", { href: "data/de/de_emissionen.csv", download: "" }, L("Deutschland", "Germany")), " · ", h("a", { href: "data/us/us_auctions.csv", download: "" }, L("Vereinigte Staaten", "United States")), "."),
+        h("a", { href: "data/de/de_emissionen.csv", download: "" }, L("Deutschland", "Germany")), " · ", h("a", { href: "data/us/us_auctions.csv", download: "" }, L("Vereinigte Staaten", "United States")), " · ",
+        h("a", { href: "data/gb/gb_gilts.csv", download: "" }, L("Vereinigtes Königreich", "United Kingdom")),
+        L(" (dazu die aus den Renditen abgeleiteten Stammdaten je Gilt: ", " (plus the reference data per gilt derived from the yields: "),
+        h("a", { href: "data/gb/gb_gilt_lines.csv", download: "" }, "gb_gilt_lines.csv"), ")."),
       list,
       h("h2", null, L("Deutschland: Abgrenzung, Währung, Gebietsstand", "Germany: scope, currency, territory")),
       h("p", null, EN() && de.scope_en ? de.scope_en : de.scope),
@@ -1216,7 +1245,7 @@
     const pp = L("%-Pkt.", "pp");
     app.replaceChildren(h("div", { class: "doc" },
       h("h1", null, L("Prüfung der Zahlungsströme gegen die Emissionsdaten", "Checking the cash flows against the issuance data")),
-      h("p", { class: "muted" }, L("Deutschland (Abschnitte 1–6), danach Vereinigte Staaten.", "Germany (sections 1–6), followed by the United States.")),
+      h("p", { class: "muted" }, L("Deutschland (Abschnitte 1–6), danach Vereinigte Staaten und Vereinigtes Königreich.", "Germany (sections 1–6), followed by the United States and the United Kingdom.")),
       h("p", null, L(`Automatisch erzeugt mit python -m pipeline.verify am ${dateDe(v.checked)}.`, `Generated automatically with python -m pipeline.verify on ${dateDe(v.checked)}.`)),
       h("h2", null, L("1. Rendite-Nachrechnung", "1. Yield recalculation")),
       h("p", null, L("Aus Kurs, Kupon, Valuta, Stückzinsen und Kuponkalender wird für jede Emission die Rendite nachgerechnet und mit der veröffentlichten Durchschnittsrendite verglichen. Stimmen Kalender und Zahlungsströme, liegt die Abweichung innerhalb der Rundung der Veröffentlichung (±0,005 %-Punkte; Bubills: Geldmarktrendite act/360).",
@@ -1269,6 +1298,26 @@
           h("tbody", null, Object.entries(us.yields).map(([k, x]) => h("tr", null, h("td", null, groupLabel(k)), h("td", { class: "r" }, nf0.format(x.n)), h("td", { class: "r" }, pctNum(x.share * 100, nf1)), h("td", { class: "r" }, EN() ? String(x.tolerance_pp) : String(x.tolerance_pp).replace(".", ",")), h("td", { class: "r" }, nf3.format(x.max_abs_diff))))))),
         h("p", null, L(`Kostenidentität: ${nf0.format(us.identity.n)} Emissionen, Abweichungen: ${us.identity.failures}. Status der Emissionen: `, `Cost identity: ${nf0.format(us.identity.n)} issues, deviations: ${us.identity.failures}. Status of the issues: `),
           Object.entries(us.status_counts).map(([k, n]) => `${statusLabel(k)}: ${nf0.format(n)}`).join(" · "), "."));
+    }
+    const gb = await load("data/gb/verification.json").catch(() => null);
+    if (gb) {
+      const doc = app.querySelector(".doc");
+      const f = gb.fy2025_26, o = f.official;
+      CUR = "GBP";
+      doc.append(h("h2", null, L("Vereinigtes Königreich: Renditen, Erlöse, Summen", "United Kingdom: yields, proceeds, totals")),
+        h("p", null, L(`${nf0.format(gb.n)} Emissionen (DMO, ab 1998). Wichtig: Die DMO-Stammdaten (Fälligkeitstag, Kupontermine) waren nicht abrufbar. Sie wurden je Gilt aus den veröffentlichten Renditen seiner Emissionen abgeleitet (${gb.lines.fitted} Gilts, davon ${gb.lines.single_issue} mit nur einer Emission). Die Tabelle zeigt deshalb, wie gut die abgeleiteten Daten die Renditen treffen – das ist eine Anpassung, keine unabhängige Nachrechnung. Unabhängig sind die beiden folgenden Prüfungen.`,
+          `${nf0.format(gb.n)} issues (DMO, from 1998). Important: the DMO reference data (maturity date, coupon dates) could not be retrieved. They were derived for each gilt from the published yields of its issues (${gb.lines.fitted} gilts, ${gb.lines.single_issue} of them with only one issue). The table therefore shows how well the derived data match the yields – a fit, not an independent recalculation. The two checks that follow are independent.`)),
+        h("div", { class: "table-scroll" }, h("table", null, h("thead", null, h("tr", null, h("th", null, L("Gruppe", "Group")), h("th", { class: "r" }, L("Emissionen", "Issues")), h("th", { class: "r" }, L("innerhalb Toleranz", "within tolerance")), h("th", { class: "r" }, L("Toleranz %-Pkt.", "Tolerance pp")), h("th", { class: "r" }, "Max |Δ|"))),
+          h("tbody", null, Object.entries(gb.yields).map(([k, x]) => h("tr", null, h("td", null, EN() ? k.replace(" vor Nov. 1998", " before Nov 1998") : k), h("td", { class: "r" }, nf0.format(x.n)), h("td", { class: "r" }, pctNum(x.share * 100, nf1)), h("td", { class: "r" }, EN() ? String(x.tolerance_pp) : String(x.tolerance_pp).replace(".", ",")), h("td", { class: "r" }, nf3.format(x.max_abs_diff))))))),
+        h("p", null, h("strong", null, L("Erlösabgleich der Index-linked Gilts: ", "Proceeds check for index-linked gilts: ")),
+          L(`Nominal × realer Kurs × Index-Verhältniszahl (aus dem RPI des ONS berechnet) trifft den von der DMO veröffentlichten Cash-Erlös bei ${gb.cash.within_0_01pct} von ${gb.cash.n} Emissionen auf 0,01 % (seit 2015: ${gb.cash.since_2015_within_0_01pct} von ${gb.cash.since_2015_n}); größte Abweichung ${pctNum(gb.cash.max_rel * 100, nf2)}. Ältere Linker weichen stärker ab; gerechnet wird deshalb immer mit dem veröffentlichten Erlös.`,
+            `Nominal × real price × index ratio (calculated from ONS RPI) matches the cash raised published by the DMO to within 0.01% for ${gb.cash.within_0_01pct} of ${gb.cash.n} issues (since 2015: ${gb.cash.since_2015_within_0_01pct} of ${gb.cash.since_2015_n}); largest deviation ${pctNum(gb.cash.max_rel * 100, nf2)}. Older linkers deviate more; calculations therefore always use the published proceeds.`)),
+        h("p", null, h("strong", null, L("Summenabgleich Haushaltsjahr 2025–26: ", "Totals check fiscal year 2025–26: ")),
+          L(`Auktionen einschließlich PAOF ${money(f.auctions_paof)} (Annual Review: ${money(o.auctions_paof)}, ${f.n_auctions} von ${o.n_auctions} Auktionen), Tender ${money(f.tenders)} (${money(o.tenders)}), Syndizierungen ${money(f.syndications)} (${money(o.syndications)}).`,
+            `Auctions including PAOF ${money(f.auctions_paof)} (Annual Review: ${money(o.auctions_paof)}, ${f.n_auctions} of ${o.n_auctions} auctions), tenders ${money(f.tenders)} (${money(o.tenders)}), syndications ${money(f.syndications)} (${money(o.syndications)}).`)),
+        h("p", null, L(`Kostenidentität: ${nf0.format(gb.identity.n)} Emissionen, Abweichungen: ${gb.identity.failures}. Status der Emissionen: `, `Cost identity: ${nf0.format(gb.identity.n)} issues, deviations: ${gb.identity.failures}. Status of the issues: `),
+          Object.entries(gb.status_counts).map(([k, n]) => `${statusLabel(k)}: ${nf0.format(n)}`).join(" · "), "."));
+      CUR = "EUR";
     }
     const complete = cov.filter(([, x]) => x.complete_year);
     queueMicrotask(() => cleanups.push(barChart(box, {
