@@ -39,9 +39,10 @@ python -m pipeline.verify                 # Prüfung gegen Emissionsdaten
 cd site && python -m http.server 8000     # http://localhost:8000
 ```
 
-Die Seite ist rein statisch und kann auf jedem Webserver liegen. `.github/workflows/pages.yml` testet, baut,
-prüft und veröffentlicht sie über GitHub Pages (in den Repository-Einstellungen „Pages → Source: GitHub Actions“
-aktivieren).
+Die Seite ist rein statisch und kann auf jedem Webserver liegen. Öffentlich erreichbar über GitHub Pages
+(Modus „Deploy from a branch“, `main`, Wurzelverzeichnis): https://hstre.github.io/TrueDepts/ – die `index.html`
+im Hauptverzeichnis leitet auf `site/` weiter. `.github/workflows/check.yml` führt bei jedem Push Tests, Build und
+Prüfung aus.
 
 ## Ein weiteres Land ergänzen
 
