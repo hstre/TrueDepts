@@ -23,6 +23,7 @@ from . import bbk_import, bonds
 from .de_import import (INSTRUMENT_LABEL, METHOD_LABEL, load_auctions, load_debt_report,
                         load_index_ratios, load_securities)
 from .sources import CANDIDATES, SOURCES
+from .us_import import INSTRUMENT_LABEL as US_INSTRUMENT_LABEL
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site" / "data"
@@ -151,7 +152,11 @@ def first_coupon_conventions(auctions, ilb_meta):
 
 
 def governments():
-    g = json.loads((META / "de_governments.json").read_text(encoding="utf-8"))
+    return governments_from("de_governments.json")
+
+
+def governments_from(fname):
+    g = json.loads((META / fname).read_text(encoding="utf-8"))
     govs = sorted(g["governments"], key=lambda x: x["from"])
     fms = sorted(g["finance_ministers"], key=lambda x: x["from"])
     return govs, fms, g["_hinweis"]
@@ -178,26 +183,59 @@ def fm_for(date: dt.date, fms):
 # ---------------------------------------------------------------------------
 
 COUNTRY_NAMES = {
-    "DEU": ("DE", "Deutschland", "EUR"), "FRA": ("FR", "Frankreich", "EUR"), "ITA": ("IT", "Italien", "EUR"),
-    "ESP": ("ES", "Spanien", "EUR"), "NLD": ("NL", "Niederlande", "EUR"), "AUT": ("AT", "Österreich", "EUR"),
-    "GBR": ("GB", "Vereinigtes Königreich", "GBP"), "USA": ("US", "Vereinigte Staaten", "USD"),
-    "JPN": ("JP", "Japan", "JPY"),
+    "ARG": ("AR", "Argentinien", "ARS"), "AUS": ("AU", "Australien", "AUD"), "BRA": ("BR", "Brasilien", "BRL"),
+    "CAN": ("CA", "Kanada", "CAD"), "CHN": ("CN", "China", "CNY"), "FRA": ("FR", "Frankreich", "EUR"),
+    "DEU": ("DE", "Deutschland", "EUR"), "IND": ("IN", "Indien", "INR"), "IDN": ("ID", "Indonesien", "IDR"),
+    "ITA": ("IT", "Italien", "EUR"), "JPN": ("JP", "Japan", "JPY"), "KOR": ("KR", "Südkorea", "KRW"),
+    "MEX": ("MX", "Mexiko", "MXN"), "RUS": ("RU", "Russland", "RUB"), "SAU": ("SA", "Saudi-Arabien", "SAR"),
+    "ZAF": ("ZA", "Südafrika", "ZAR"), "TUR": ("TR", "Türkei", "TRY"), "GBR": ("GB", "Vereinigtes Königreich", "GBP"),
+    "USA": ("US", "Vereinigte Staaten", "USD"),
 }
 
 
 def load_intl():
+    """Internationale Reihen je G20-Land.
+
+    wb_interest: Zinszahlungen des Zentralstaats (Weltbank, Mio. Landeswährung).
+    weo: Gesamtstaat laut IWF-WEO; net_interest = Primärsaldo − Finanzierungssaldo (% BIP, abgeleitet),
+         debt = Bruttoschulden (% BIP); projection = Jahr nach dem letzten Ist-Jahr des IWF.
+    """
+    import csv
+    import re
     raw = ROOT / "data" / "raw" / "intl"
-    out = {code: {"iso3": iso3, "name": name, "currency": cur, "wb_interest": {}, "imf_debt": {}}
+    out = {code: {"iso3": iso3, "name": name, "currency": cur, "wb_interest": {}, "weo": {}, "weo_meta": {}}
            for iso3, (code, name, cur) in COUNTRY_NAMES.items()}
     wb = json.loads((raw / "worldbank_GC.XPN.INTP.CN.json").read_text(encoding="utf-8"))
     for row in wb[1] or []:
         iso3 = row["countryiso3code"]
         if iso3 in COUNTRY_NAMES and row["value"] is not None:
             out[COUNTRY_NAMES[iso3][0]]["wb_interest"][row["date"]] = round(row["value"] / 1e6, 1)
-    imf = json.loads((raw / "imf_GGXWDG_NGDP.json").read_text(encoding="utf-8"))
-    for iso3, series in imf["values"]["GGXWDG_NGDP"].items():
-        if iso3 in COUNTRY_NAMES:
-            out[COUNTRY_NAMES[iso3][0]]["imf_debt"] = {y: v for y, v in series.items() if v is not None}
+    vals = defaultdict(dict)
+    with open(raw / "imf_weo_g20.csv", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            iso3 = r["COUNTRY"]
+            if iso3 not in COUNTRY_NAMES or r["OBS_VALUE"] in ("", "NaN"):
+                continue
+            code = COUNTRY_NAMES[iso3][0]
+            vals[(code, r["TIME_PERIOD"])][r["INDICATOR"]] = float(r["OBS_VALUE"])
+            meta = out[code]["weo_meta"]
+            la = re.findall(r"\d{4}", r["LATEST_ACTUAL_ANNUAL_DATA"] or "")
+            if la:  # z. B. "2025" oder "FY2024/25" (Fiskaljahr, erstes Kalenderjahr)
+                meta["latest_actual"] = int(la[0])
+                meta["latest_actual_label"] = r["LATEST_ACTUAL_ANNUAL_DATA"]
+            if r.get("FISCAL_SECTOR_GENERAL_GOVERNMENT_COMPOSITION"):
+                meta["composition"] = r["FISCAL_SECTOR_GENERAL_GOVERNMENT_COMPOSITION"]
+            if r.get("START_END_MONTHS_OF_REPORTING_YEAR"):
+                meta["fiscal_year"] = r["START_END_MONTHS_OF_REPORTING_YEAR"]
+    for (code, year), v in vals.items():
+        e = {}
+        if "GGXONLB_NGDP" in v and "GGXCNL_NGDP" in v:
+            e["net_interest"] = round(v["GGXONLB_NGDP"] - v["GGXCNL_NGDP"], 2)
+        if "GGXWDG_NGDP" in v:
+            e["debt"] = round(v["GGXWDG_NGDP"], 1)
+        la = out[code]["weo_meta"].get("latest_actual")
+        e["projection"] = bool(la and int(year) > la)
+        out[code]["weo"][year] = e
     return out
 
 
@@ -215,6 +253,7 @@ def main():
     intl = load_intl()
     govs, fms, gov_note = governments()
     agg, agg_gov = bbk_import.annual_aggregates(govs)
+    vgr = bbk_import.load_annual("vgr_zinsausgaben_staat")
     last_auction = max(a["date"] for a in auctions)
     ilb_last = max(max(v) for v in ratio_tables.values())
 
@@ -286,11 +325,13 @@ def main():
         ctx = next((p for p in context["periods"] if p["from"] <= year <= p["to"]), None)
         rep = report.get(year)
         wb_int = intl["DE"]["wb_interest"].get(str(year))
-        imf = intl["DE"]["imf_debt"].get(str(year))
+        weo = intl["DE"]["weo"].get(str(year))
+        imf = weo.get("debt") if weo else None
+        general = {"weo": weo, "vgr_interest": vgr.get(year)} if (weo or vgr.get(year)) else None
         v = build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last,
-                          agg.get(year), {g: vals for (yy, g), vals in agg_gov.items() if yy == year})
+                          agg.get(year), {g: vals for (yy, g), vals in agg_gov.items() if yy == year}, general)
         dump(SITE / "de" / "years" / f"{year}.json", v)
-        summary.append({k: v[k] for k in ("year", "status", "totals", "paid", "split", "coverage", "context", "aggregate")} |
+        summary.append({k: v[k] for k in ("year", "status", "totals", "paid", "split", "coverage", "context", "aggregate", "general_gov")} |
                        {"govs": [g["id"] for g in v["governments"]]})
         for g in v["governments"]:
             if g.get("model"):
@@ -322,21 +363,35 @@ def main():
         "scenarios": bonds.SCENARIOS, "scope": context["scope"],
         "model_terms": {"short": bbk_import.TERM_SHORT, "long": bbk_import.TERM_LONG},
     })
+    all_issues = [i for y in sorted(issues_by_year) for i in issues_by_year[y]]
+    pol = political_context(all_issues, govs, last_auction)
     gov_out = []
     for gv in govs:
         t = gov_totals.get(gv["id"])
+        gv = gv | {"context": pol.get(gv["id"])}
         gov_out.append(gv | ({k: (r1(v) if k not in ("first", "last", "n", "model_first", "model_last") else int(v))
                               for k, v in t.items()} if t else {}))
-    dump(SITE / "de" / "governments.json", {"last_year": today.year, "note": gov_note, "governments": gov_out, "finance_ministers": fms})
+    dump(SITE / "de" / "governments.json", {"last_year": today.year, "note": gov_note, "governments": gov_out, "finance_ministers": fms,
+                                          "data_from": 1999, "gov_label": "Bundesregierung", "currency": "EUR"})
+
+    # --- Vereinigte Staaten ---
+    from .build_us import build_us
+    us_info = build_us(today, intl)
 
     # --- Länder, Quellen, internationale Reihen ---
+    vintage = {"DE": {"from": 1999, "to": today.year, "source": "Finanzagentur (Einzelemissionen)",
+                      "scope": "Bund (Zentralstaat) einschließlich über Bundeswertpapiere finanzierter Sondervermögen",
+                      "model_from": 1960},
+               "US": {"from": 1979, "to": today.year, "source": "U.S. Treasury, FiscalData (Einzelauktionen)",
+                      "scope": "Zentralregierung: marktfähige Treasury-Wertpapiere"}}
     countries = []
-    for code, c in intl.items():
+    for code, c in sorted(intl.items(), key=lambda kv: kv[1]["name"]):
         countries.append({
             "code": code, "name": c["name"], "currency": c["currency"],
-            "vintage_data": code == "DE",
-            "vintage_years": [1999, today.year] if code == "DE" else None,
+            "vintage_data": code in vintage, "vintage": vintage.get(code),
+            "vintage_years": [vintage[code]["from"], today.year] if code in vintage else None,
             "wb_years": [min(c["wb_interest"], default=None), max(c["wb_interest"], default=None)],
+            "weo_meta": c["weo_meta"],
             "candidates": [x for x in CANDIDATES if x["country"] == code],
         })
     dump(SITE / "countries.json", {"countries": countries, "first_year": FIRST_YEAR, "last_year": today.year})
@@ -345,13 +400,62 @@ def main():
     dump(SITE / "sources.json", {
         "sources": [{"id": k} | {kk: vv for kk, vv in v.items()} | {"retrieval": manifest.get(k)} for k, v in SOURCES.items()],
         "candidates": CANDIDATES, "ilb_meta": ilb_meta, "built": today.isoformat(),
-        "instrument_labels": INSTRUMENT_LABEL, "method_labels": METHOD_LABEL,
+        "instrument_labels": INSTRUMENT_LABEL | US_INSTRUMENT_LABEL, "method_labels": METHOD_LABEL,
     })
     (SITE.parent / "METHODE.md").write_bytes((ROOT / "docs" / "METHODE.md").read_bytes())
     print(f"{len(auctions)} Emissionen, Jahre {FIRST_YEAR}–{today.year} geschrieben nach {SITE.relative_to(ROOT)}")
 
 
-def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last, agg=None, agg_gov=None):
+def comparison_metrics(cost, proceeds, avg_term):
+    """Vergleichskennzahlen unabhängig von Währung und Größe.
+
+    cost_per_100: Finanzierungskosten bis Fälligkeit je 100 Einheiten Emissionserlös (über die gesamte Laufzeit).
+    cost_per_100_year: dasselbe je Jahr durchschnittlicher Laufzeit – grobe jährliche Belastung; lange Kredite
+    können insgesamt mehr kosten und trotzdem günstigere jährliche Konditionen haben.
+    """
+    if not proceeds or proceeds <= 0:
+        return {}
+    per100 = cost / proceeds * 100
+    out = {"cost_per_100": round(per100, 2)}
+    if avg_term:
+        out["cost_per_100_year"] = round(per100 / avg_term, 3)
+    return out
+
+
+def political_context(issues, govs, last_date):
+    """Zeitlicher Kontext je Regierung: Zinsniveau der Emissionen in der Amtszeit und übernommene Fälligkeiten.
+
+    Übernommen = in der Amtszeit fällige Rückzahlungen aus Emissionen, die vor Amtsbeginn begeben wurden
+    (nur erfasste Emissionen).
+    """
+    out = {}
+    for k, gv in enumerate(govs):
+        start = dt.date.fromisoformat(gv["from"])
+        end = dt.date.fromisoformat(govs[k + 1]["from"]) if k + 1 < len(govs) else last_date
+        own = [i for i in issues if "cost" in i and start <= dt.date.fromisoformat(i["date"]) < end]
+        inherited = sum(i["redemption"] for i in issues if "cost" in i
+                        and dt.date.fromisoformat(i["date"]) < start and start <= dt.date.fromisoformat(i["maturity"]) < end)
+        own_due = sum(i["redemption"] for i in own if dt.date.fromisoformat(i["maturity"]) < end)
+        wy = [(i["yield_pub"], i["allotted"]) for i in own if i["yield_pub"] is not None]
+        vol = sum(w for _, w in wy)
+        term = sum(i["allotted"] * (dt.date.fromisoformat(i["maturity"]) - dt.date.fromisoformat(i["settle"])).days / 365.25
+                   for i in own)
+        allotted = sum(i["allotted"] for i in own)
+        out[gv["id"]] = {
+            "avg_yield": round(sum(y * w for y, w in wy) / vol, 3) if vol else None,
+            "avg_term": round(term / allotted, 2) if allotted else None,
+            "inherited_redemptions": round(inherited, 1) if own or inherited else None,
+            "own_redemptions_in_term": round(own_due, 1) if own else None,
+            "period_end": end.isoformat(),
+        }
+        if own:
+            out[gv["id"]].update(comparison_metrics(sum(i["cost"] for i in own), sum(i["proceeds"] for i in own),
+                                                    term / allotted if allotted else None))
+    return out
+
+
+def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last, agg=None, agg_gov=None,
+                  general=None, coverage_allowed=True):
     priced = [i for i in items if "cost" in i]
     has_issue_data = bool(items)
     totals = None
@@ -392,6 +496,7 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
             "avg_term": round(t["w_term"] / t["allotted"], 2) if t["allotted"] else None,
             "partial": year == today.year,
         }
+        totals.update(comparison_metrics(t["cost"], t["proceeds"], t["w_term"] / t["allotted"] if t["allotted"] else None))
     statuses = {i["status"] for i in items}
     if not has_issue_data:
         status = NONE
@@ -430,7 +535,7 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
             split["cost_net_model"] = [r1(agg["model"][k] * split["share_net"]) for k in ("model_low", "model_mid", "model_high")]
 
     coverage = None
-    if totals and rep and rep.get("gross_borrowing") and rep.get("complete_year"):
+    if coverage_allowed and totals and rep and rep.get("gross_borrowing") and rep.get("complete_year"):
         coverage = round(totals["allotted"] / rep["gross_borrowing"], 4)
 
     paid = {"status": NONE}
@@ -480,6 +585,7 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
         "flows": {y: [r1(x) for x in v] for y, v in sorted(flows.items())},
         "maturities": {y: r1(v) for y, v in sorted(maturities.items())},
         "split": split, "coverage": coverage, "paid": paid, "imf_debt": imf, "aggregate": aggregate,
+        "general_gov": general,
         "governments": gov_list, "issues": items,
         "data_through": iso(last_auction) if year == today.year else None,
         "ilb_last_official": iso(ilb_last),

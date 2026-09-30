@@ -28,22 +28,35 @@ def load_manifest():
     return {}
 
 
+def _get(url, source_id, accept="*/*"):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; TrueDepts-Datenimport/1.0)", "Accept": accept})
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                return resp.read()
+        except OSError as exc:  # Zeitüberschreitung, Verbindungsabbruch
+            print(f"{source_id}: Versuch {attempt + 1} fehlgeschlagen ({exc}), neuer Versuch …")
+            time.sleep(2 ** (attempt + 1))
+    raise RuntimeError(f"{source_id}: Download fehlgeschlagen")
+
+
 def fetch(source_id, manifest):
     src = SOURCES[source_id]
     target = RAW / src["file"]
     target.parent.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(src["download"], headers={"User-Agent": "Mozilla/5.0 (compatible; TrueDepts-Datenimport/1.0)", "Accept": "*/*"})
-    body = None
-    for attempt in range(4):
-        try:
-            with urllib.request.urlopen(req, timeout=300) as resp:
-                body = resp.read()
-            break
-        except OSError as exc:  # Zeitüberschreitung, Verbindungsabbruch
-            print(f"{source_id}: Versuch {attempt + 1} fehlgeschlagen ({exc}), neuer Versuch …")
-            time.sleep(2 ** (attempt + 1))
-    if body is None:
-        raise RuntimeError(f"{source_id}: Download fehlgeschlagen")
+    if src.get("pages"):
+        # Paginierte JSON-API (FiscalData): alle Seiten zu einer Datei zusammenführen
+        rows = []
+        page = 1
+        while True:
+            chunk = json.loads(_get(src["download"] + f"&page[number]={page}", source_id))
+            rows.extend(chunk["data"])
+            if page >= chunk["meta"]["total-pages"]:
+                break
+            page += 1
+        body = json.dumps({"data": rows}, ensure_ascii=False).encode("utf-8")
+    else:
+        body = _get(src["download"], source_id, src.get("accept", "*/*"))
     target.write_bytes(body)
     manifest[source_id] = {
         "file": src["file"],

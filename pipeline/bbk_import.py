@@ -119,3 +119,13 @@ def gov_id_for_month(month: str, govs) -> str | None:
 
 def meta_all():
     return {n: load_series(n)[1] for n in ("gross", "gross_le4", "gross_gt4", "em_yield", "outstanding", "umlaufrendite")}
+
+
+def load_annual(name: str) -> dict[int, float]:
+    """Jahreswerte einer Bundesbank-CSV (Zeilen 'JJJJ;Wert;'), z. B. VGR-Zinsausgaben des Staates in Mio. €."""
+    out = {}
+    for line in (RAW / f"bundesbank_{name}.csv").read_text(encoding="utf-8-sig").splitlines():
+        parts = line.split(";")
+        if re.fullmatch(r"\d{4}", parts[0]) and parts[1].strip() not in ("", ".", "-"):
+            out[int(parts[0])] = float(parts[1].replace(",", "."))
+    return out

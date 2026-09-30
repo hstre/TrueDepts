@@ -32,9 +32,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site" / "data"
 
 
-def load_issues():
+def load_issues(cc="de"):
     out = []
-    for p in sorted((SITE / "de" / "years").glob("*.json")):
+    for p in sorted((SITE / cc / "years").glob("*.json")):
         out.extend(json.loads(p.read_text(encoding="utf-8"))["issues"])
     return out
 
@@ -135,6 +135,45 @@ def check_coverage(issues, report):
     return out
 
 
+def check_us():
+    """USA: Rendite-Nachrechnung und Kostenidentität."""
+    issues = load_issues("us")
+    groups = defaultdict(list)
+    worst = []
+    for i in issues:
+        if i.get("yield_calc") is None or i.get("yield_pub") is None:
+            continue
+        derived = i.get("price_source") in ("aus veröffentlichter Rendite berechnet",)
+        if derived:
+            continue  # Kurs wurde aus der Rendite berechnet – Nachrechnung wäre zirkulär
+        # Ältere Bills: Rendite nur zweistellig veröffentlicht
+        tol = 0.0051 if i.get("price_source") == "aus Diskontsatz" else 0.0015
+        key = f"{i['instrument']} ({'Kurs aus Diskontsatz' if i.get('price_source') == 'aus Diskontsatz' else 'Kurs veröffentlicht'})"
+        d = abs(i["yield_calc"] - i["yield_pub"])
+        groups[key].append((d, tol))
+        worst.append((d - tol, d, i))
+    summary = {k: {"n": len(v), "within_rounding": sum(d <= t for d, t in v), "share": round(sum(d <= t for d, t in v) / len(v), 4),
+                   "median_abs_diff": round(statistics.median(d for d, _ in v), 4), "max_abs_diff": round(max(d for d, _ in v), 4),
+                   "tolerance_pp": v[0][1]} for k, v in groups.items()}
+    worst.sort(key=lambda x: -x[0])
+    outliers = [{"date": i["date"], "isin": i["isin"], "instrument": f"{i['instrument']} {i.get('term') or ''}", "method": i["method"],
+                 "yield_pub": i["yield_pub"], "yield_calc": i["yield_calc"], "diff": round(d, 4), "settle_rule": i.get("price_source")}
+                for over, d, i in worst[:25] if over > 0]
+    identity = check_identity(issues)
+    status = defaultdict(int)
+    for i in issues:
+        status[i["status"]] += 1
+    derived = sum(1 for i in issues if i.get("price_source") == "aus veröffentlichter Rendite berechnet")
+    result = {"checked": dt.date.today().isoformat(), "yields": summary, "yield_outliers": outliers, "identity": identity,
+              "status_counts": dict(status), "price_from_yield": derived, "n": len(issues)}
+    (SITE / "us" / "verification.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    print("USA – Rendite-Nachrechnung:")
+    for k, v in summary.items():
+        print(f"   {k:40s} n={v['n']:5d}  innerhalb ±{v['tolerance_pp']}: {v['share']:.1%}  Max {v['max_abs_diff']:.4f}")
+    print(f"USA – Kostenidentität: {identity['n']} Emissionen, {identity['failures']} Abweichungen")
+    return identity["failures"]
+
+
 def main():
     issues = load_issues()
     securities = load_securities()
@@ -158,7 +197,8 @@ def main():
     print(f"4. Emissionsvolumen = Zuteilung + Marktpflegequote: {rows['inconsistent']} von {rows['n']} Zeilen weichen ab")
     print("5. Abdeckung der amtlichen Bruttokreditaufnahme durch zugeteilte Emissionen:")
     print("   " + ", ".join(f"{y}: {v['share']:.0%}" for y, v in coverage.items()))
-    return 1 if identity["failures"] else 0
+    us_fail = check_us()
+    return 1 if identity["failures"] or us_fail else 0
 
 
 if __name__ == "__main__":

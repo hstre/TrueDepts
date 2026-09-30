@@ -1,0 +1,325 @@
+{
+ "checked": "2026-09-30",
+ "yields": {
+  "Bill (Kurs aus Diskontsatz)": {
+   "n": 2212,
+   "within_rounding": 2197,
+   "share": 0.9932,
+   "median_abs_diff": 0.0023,
+   "max_abs_diff": 0.0552,
+   "tolerance_pp": 0.0051
+  },
+  "CMB (Kurs aus Diskontsatz)": {
+   "n": 148,
+   "within_rounding": 145,
+   "share": 0.9797,
+   "median_abs_diff": 0.0026,
+   "max_abs_diff": 0.0415,
+   "tolerance_pp": 0.0051
+  },
+  "Note (Kurs veröffentlicht)": {
+   "n": 1504,
+   "within_rounding": 1497,
+   "share": 0.9953,
+   "median_abs_diff": 0.0,
+   "max_abs_diff": 0.0036,
+   "tolerance_pp": 0.0015
+  },
+  "TIPS (Kurs veröffentlicht)": {
+   "n": 269,
+   "within_rounding": 269,
+   "share": 1.0,
+   "median_abs_diff": 0.0,
+   "max_abs_diff": 0.001,
+   "tolerance_pp": 0.0015
+  },
+  "CMB (Kurs veröffentlicht)": {
+   "n": 786,
+   "within_rounding": 765,
+   "share": 0.9733,
+   "median_abs_diff": 0.0003,
+   "max_abs_diff": 0.0048,
+   "tolerance_pp": 0.0015
+  },
+  "Bill (Kurs veröffentlicht)": {
+   "n": 5192,
+   "within_rounding": 5192,
+   "share": 1.0,
+   "median_abs_diff": 0.0003,
+   "max_abs_diff": 0.001,
+   "tolerance_pp": 0.0015
+  },
+  "Bond (Kurs veröffentlicht)": {
+   "n": 306,
+   "within_rounding": 306,
+   "share": 1.0,
+   "median_abs_diff": 0.0001,
+   "max_abs_diff": 0.0009,
+   "tolerance_pp": 0.0015
+  }
+ },
+ "yield_outliers": [
+  {
+   "date": "1980-11-24",
+   "isin": "9127936S0",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 15.25,
+   "yield_calc": 15.1948,
+   "diff": 0.0552,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1987-04-02",
+   "isin": "912794MF8",
+   "instrument": "CMB 9-Day",
+   "method": "Auktion",
+   "yield_pub": 6.19,
+   "yield_calc": 6.2315,
+   "diff": 0.0415,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1981-05-22",
+   "isin": "9127938B5",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 17.16,
+   "yield_calc": 17.1514,
+   "diff": 0.0086,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "2001-04-18",
+   "isin": "912795KH3",
+   "instrument": "CMB 4-Day",
+   "method": "Auktion",
+   "yield_pub": 4.56,
+   "yield_calc": 4.5648,
+   "diff": 0.0048,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1998-11-02",
+   "isin": "912795AY7",
+   "instrument": "CMB 79-Day",
+   "method": "Auktion",
+   "yield_pub": 4.78,
+   "yield_calc": 4.7848,
+   "diff": 0.0048,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1999-03-30",
+   "isin": "912795EP2",
+   "instrument": "CMB 19-Day",
+   "method": "Auktion",
+   "yield_pub": 4.92,
+   "yield_calc": 4.9247,
+   "diff": 0.0047,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1999-02-25",
+   "isin": "912795BJ9",
+   "instrument": "CMB 52-Day",
+   "method": "Auktion",
+   "yield_pub": 4.85,
+   "yield_calc": 4.8546,
+   "diff": 0.0046,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1990-11-26",
+   "isin": "912794VX9",
+   "instrument": "Bill 13-Week",
+   "method": "Auktion",
+   "yield_pub": 7.24,
+   "yield_calc": 7.2482,
+   "diff": 0.0082,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "2000-10-31",
+   "isin": "912795FL0",
+   "instrument": "CMB 50-Day",
+   "method": "Auktion",
+   "yield_pub": 6.53,
+   "yield_calc": 6.5256,
+   "diff": 0.0044,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "2001-02-28",
+   "isin": "912795FX4",
+   "instrument": "CMB 13-Day",
+   "method": "Auktion",
+   "yield_pub": 5.49,
+   "yield_calc": 5.4857,
+   "diff": 0.0043,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1985-11-15",
+   "isin": "912794JP0",
+   "instrument": "CMB 69-Day",
+   "method": "Auktion",
+   "yield_pub": 7.71,
+   "yield_calc": 7.7178,
+   "diff": 0.0078,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "2000-08-31",
+   "isin": "912795GZ8",
+   "instrument": "CMB 14-Day",
+   "method": "Auktion",
+   "yield_pub": 6.53,
+   "yield_calc": 6.5342,
+   "diff": 0.0042,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "2001-01-02",
+   "isin": "912795KF7",
+   "instrument": "CMB 14-Day",
+   "method": "Auktion",
+   "yield_pub": 6.53,
+   "yield_calc": 6.5342,
+   "diff": 0.0042,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "2001-07-02",
+   "isin": "912795HC8",
+   "instrument": "CMB 9-Day",
+   "method": "Auktion",
+   "yield_pub": 3.82,
+   "yield_calc": 3.8158,
+   "diff": 0.0042,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "2000-08-14",
+   "isin": "912795FA4",
+   "instrument": "CMB 37-Day",
+   "method": "Auktion",
+   "yield_pub": 6.48,
+   "yield_calc": 6.4841,
+   "diff": 0.0041,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1999-06-02",
+   "isin": "912795GV7",
+   "instrument": "CMB 12-Day",
+   "method": "Auktion",
+   "yield_pub": 4.8,
+   "yield_calc": 4.796,
+   "diff": 0.004,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "2000-02-17",
+   "isin": "912795DT5",
+   "instrument": "CMB 69-Day",
+   "method": "Auktion",
+   "yield_pub": 5.86,
+   "yield_calc": 5.8563,
+   "diff": 0.0037,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "2000-02-08",
+   "isin": "9128275S7",
+   "instrument": "Note 4-Year 9-Month",
+   "method": "Auktion",
+   "yield_pub": 6.741,
+   "yield_calc": 6.7446,
+   "diff": 0.0036,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1990-04-02",
+   "isin": "912794VD3",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 8.26,
+   "yield_calc": 8.267,
+   "diff": 0.007,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1994-07-11",
+   "isin": "912794N67",
+   "instrument": "Bill 13-Week",
+   "method": "Auktion",
+   "yield_pub": 4.61,
+   "yield_calc": 4.617,
+   "diff": 0.007,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1983-10-24",
+   "isin": "912794EW0",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 9.48,
+   "yield_calc": 9.4869,
+   "diff": 0.0069,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1998-11-30",
+   "isin": "912795EM9",
+   "instrument": "CMB 14-Day",
+   "method": "Auktion",
+   "yield_pub": 4.94,
+   "yield_calc": 4.9368,
+   "diff": 0.0032,
+   "settle_rule": "veröffentlicht"
+  },
+  {
+   "date": "1993-06-28",
+   "isin": "912794H23",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 3.24,
+   "yield_calc": 3.2465,
+   "diff": 0.0065,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1993-07-19",
+   "isin": "912794H56",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 3.24,
+   "yield_calc": 3.2465,
+   "diff": 0.0065,
+   "settle_rule": "aus Diskontsatz"
+  },
+  {
+   "date": "1994-01-18",
+   "isin": "912794M50",
+   "instrument": "Bill 26-Week",
+   "method": "Auktion",
+   "yield_pub": 3.24,
+   "yield_calc": 3.2465,
+   "diff": 0.0065,
+   "settle_rule": "aus Diskontsatz"
+  }
+ ],
+ "identity": {
+  "n": 11126,
+  "failures": 0,
+  "examples": []
+ },
+ "status_counts": {
+  "calc": 10969,
+  "model": 8,
+  "proj": 149
+ },
+ "price_from_yield": 554,
+ "n": 11126
+}

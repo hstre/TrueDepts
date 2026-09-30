@@ -111,3 +111,28 @@ class InflationLinked(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class USConventions(unittest.TestCase):
+    def test_end_of_month_schedule(self):
+        sch = bonds.Schedule(D(2026, 2, 28), D(2024, 2, 29), 2, eom=True)
+        self.assertEqual(sch.grid, [D(2024, 2, 29), D(2024, 8, 31), D(2025, 2, 28), D(2025, 8, 31), D(2026, 2, 28)])
+
+    def test_ten_year_note_2024_reproduces_high_yield(self):
+        # 10-Year Note, Auktion 08.05.2024: Kupon 4,375 %, Kurs 99,13726, veröffentlichte Rendite 4,483 %
+        y = bonds.isma_yield(0.04375, 99.13726, D(2024, 5, 15), D(2034, 5, 15), D(2024, 5, 15), freq=2, eom=True)
+        self.assertAlmostEqual(y * 100, 4.483, delta=0.0015)
+
+    def test_bill_investment_rate(self):
+        p = bonds.bill_price_from_discount(0.0475, D(2024, 5, 16), D(2025, 5, 15))
+        y = bonds.bill_bond_equivalent_yield(p, D(2024, 5, 16), D(2025, 5, 15))
+        self.assertGreater(y, 0.0475)  # Investment Rate liegt über dem Diskontsatz
+        self.assertAlmostEqual(y, 0.04997, delta=0.0002)
+
+    def test_frn_fixed_spread_and_projection(self):
+        res = bonds.floating_rate(1000.0, 0.001, 100.0, D(2026, 1, 30), D(2028, 1, 31), D(2026, 1, 31),
+                                  lambda d: 0.04, D(2026, 6, 30))
+        lo, mid, hi = res.cost_band
+        self.assertLess(lo, mid)
+        self.assertLess(mid, hi)
+        self.assertAlmostEqual(mid, 1000 * 0.041 * (D(2028, 1, 31) - D(2026, 1, 31)).days / 360, delta=0.5)

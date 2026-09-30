@@ -1,0 +1,15 @@
+{
+  "_hinweis": "Redaktionelle Zusammenstellung der US-Präsidentschaften (Amtsantritt 20. Januar). Quelle zur Prüfung: https://www.whitehouse.gov/about-the-white-house/presidents/ . Die Zuordnung einer Emission erfolgt nach dem Auktionstag. In den USA legt der Kongress Ausgaben und die Schuldenobergrenze fest; die Zuordnung zur Regierung ist eine zeitliche, keine rechtliche Zurechnung.",
+  "governments": [
+    {"id": "carter", "from": "1977-01-20", "head": "Jimmy Carter", "parties": "Demokratische Partei"},
+    {"id": "reagan", "from": "1981-01-20", "head": "Ronald Reagan", "parties": "Republikanische Partei"},
+    {"id": "bush41", "from": "1989-01-20", "head": "George H. W. Bush", "parties": "Republikanische Partei"},
+    {"id": "clinton", "from": "1993-01-20", "head": "Bill Clinton", "parties": "Demokratische Partei"},
+    {"id": "bush43", "from": "2001-01-20", "head": "George W. Bush", "parties": "Republikanische Partei"},
+    {"id": "obama", "from": "2009-01-20", "head": "Barack Obama", "parties": "Demokratische Partei"},
+    {"id": "trump45", "from": "2017-01-20", "head": "Donald Trump", "parties": "Republikanische Partei"},
+    {"id": "biden", "from": "2021-01-20", "head": "Joe Biden", "parties": "Demokratische Partei"},
+    {"id": "trump47", "from": "2025-01-20", "head": "Donald Trump", "parties": "Republikanische Partei"}
+  ],
+  "finance_ministers": []
+}

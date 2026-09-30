@@ -7,8 +7,14 @@ Finanzierungskosten der in diesem Jahr aufgenommenen Staatsschulden bis zu ihrer
 einzelnen Emissionen, mit sichtbarem Status jeder Zahl („aus einzelnen Emissionen berechnet“, „modelliert“,
 „Projektion“, „amtliche Statistik“, „internationale Datenbank“, „keine ausreichenden Daten“).
 
-Prototyp: **Deutschland (Bund), Emissionen der Finanzagentur seit 1999**. Jahre ab 1945 und weitere Länder
-werden mit ihren Datenlücken angezeigt.
+Abdeckung (G20):
+- **Deutschland (Bund):** Einzelemissionen der Finanzagentur ab 1999; 1960–1998 modellierte Größenordnung aus Bundesbank-Aggregaten.
+- **Vereinigte Staaten (Treasury):** alle Auktionen seit 1979 (FiscalData), einschließlich TIPS und FRN.
+- **Übrige G20:** gezahlte Zinsen des Zentralstaats (Weltbank) und Gesamtstaat (IWF: Nettozinsen, Schulden in % des BIP);
+  keine Jahrgangswerte, weil Einzelemissionen (noch) nicht importiert sind. Amtliche Quellen sind im Quellenverzeichnis vermerkt.
+
+Vergleichsansicht mit Kosten je 100 Einheiten Emissionserlös, Laufzeit und Jahreswert; Regierungsansicht mit Zinsniveau und
+übernommenen Fälligkeiten.
 
 - Daten- und Methodenkonzept mit durchgerechnetem Beispiel: [`docs/METHODE.md`](docs/METHODE.md)
 - Quellen: [`pipeline/sources.py`](pipeline/sources.py), Rohdaten unverändert in `data/raw/` (mit `MANIFEST.json`)
@@ -21,6 +27,9 @@ data/meta/           redaktionelle Metadaten: Regierungen, Gebietsstand/Währung
 data/processed/      normalisierte Einzelemissionen mit Rechenergebnissen (CSV)
 pipeline/fetch.py    lädt die Rohdaten neu herunter
 pipeline/de_import.py  liest die Excel-Dateien der Finanzagentur
+pipeline/bbk_import.py Bundesbank-Reihen (vor 1999, VGR-Zinsausgaben)
+pipeline/us_import.py  US-Treasury-Auktionen, TIPS-Referenz-CPI, FRN-Index
+pipeline/build_us.py   Website-Daten USA
 pipeline/bonds.py    Rechenkern: Kalender, Stückzinsen, Kuponpläne, Kosten, Renditen
 pipeline/build.py    erzeugt die JSON-Dateien der Website
 pipeline/verify.py   prüft die Zahlungsströme gegen die Emissionsdaten

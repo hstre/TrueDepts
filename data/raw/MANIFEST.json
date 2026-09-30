@@ -43,17 +43,10 @@
   },
   "wb_interest": {
     "file": "intl/worldbank_GC.XPN.INTP.CN.json",
-    "url": "https://api.worldbank.org/v2/country/DEU;FRA;ITA;ESP;NLD;AUT;GBR;USA;JPN/indicator/GC.XPN.INTP.CN?format=json&per_page=2000&date=1960:2030",
-    "retrieved": "2026-09-30T18:09:11+00:00",
-    "bytes": 128441,
-    "sha256": "dc6ff441097be0196a3716ed738ee4c4bf1e1ee535d20d343228fce76df52f3b"
-  },
-  "imf_debt": {
-    "file": "intl/imf_GGXWDG_NGDP.json",
-    "url": "https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP/DEU/FRA/ITA/ESP/NLD/AUT/GBR/USA/JPN",
-    "retrieved": "2026-09-30T18:09:48+00:00",
-    "bytes": 98046,
-    "sha256": "ee29ce0c80bcfda6875be68930b6b6d31c9b67d1834aa5c4e9aebec13a3cefd3"
+    "url": "https://api.worldbank.org/v2/country/ARG;AUS;BRA;CAN;CHN;FRA;DEU;IND;IDN;ITA;JPN;KOR;MEX;RUS;SAU;ZAF;TUR;GBR;USA/indicator/GC.XPN.INTP.CN?format=json&per_page=2000&date=1960:2030",
+    "retrieved": "2026-09-30T20:51:39+00:00",
+    "bytes": 269989,
+    "sha256": "f7f5272b7996afcce8a9e6bc316f39bdc89950f209b440ffe90b0b331ade56e6"
   },
   "de_referenzindex_2025": {
     "file": "de/archiv_referenzindex_bj2025_dt.xlsx",
@@ -103,5 +96,40 @@
     "retrieved": "2026-09-30T20:01:03+00:00",
     "bytes": 11983,
     "sha256": "00ab86db4d5a3e8ea01ddbd0f7234b2c2243795ece83369e58d9cde68493a1b2"
+  },
+  "us_auctions": {
+    "file": "us/fiscaldata_auctions.json",
+    "url": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query?fields=cusip,security_type,security_term,auction_date,issue_date,maturity_date,dated_date,first_int_payment_date,first_int_period,int_payment_frequency,int_rate,price_per100,accrued_int_per100,adj_price,high_yield,high_discnt_rate,high_investment_rate,high_discnt_margin,spread,floating_rate,inflation_index_security,index_ratio_on_issue_date,ref_cpi_on_issue_date,ref_cpi_on_dated_date,total_accepted,comp_accepted,noncomp_accepted,soma_accepted,offering_amt,reopening,original_issue_date,cash_management_bill_cmb,series&page[size]=10000&sort=auction_date",
+    "retrieved": "2026-09-30T20:43:53+00:00",
+    "bytes": 10484360,
+    "sha256": "4e9cd864892e695210f33e4a44d0d622e36fa52edecdfcb89a062eb26e3a9a20"
+  },
+  "us_interest_expense": {
+    "file": "us/fiscaldata_interest_expense.json",
+    "url": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/interest_expense?page[size]=10000&sort=record_date",
+    "retrieved": "2026-09-30T20:43:55+00:00",
+    "bytes": 3387990,
+    "sha256": "d7891d699f176ea46fa76b415f0b3af7e75edf10d7a6ec16f13e0be73dce744d"
+  },
+  "imf_weo": {
+    "file": "intl/imf_weo_g20.csv",
+    "url": "https://api.imf.org/external/sdmx/2.1/data/IMF.RES,WEO,9.0.0/ARG+AUS+BRA+CAN+CHN+FRA+DEU+IND+IDN+ITA+JPN+KOR+MEX+RUS+SAU+ZAF+TUR+GBR+USA.GGXCNL_NGDP+GGXONLB_NGDP+GGXWDG_NGDP.A?format=csv",
+    "retrieved": "2026-09-30T20:51:32+00:00",
+    "bytes": 7123423,
+    "sha256": "504f6dd040c92ae9405052731dbb56d49c303e707728146247f1d585af605e2d"
+  },
+  "bbk_vgr_interest": {
+    "file": "de/bundesbank_vgr_zinsausgaben_staat.csv",
+    "url": "https://api.statistiken.bundesbank.de/rest/data/BBGFS1/A.BJ9182?format=csv",
+    "retrieved": "2026-09-30T20:51:51+00:00",
+    "bytes": 1350,
+    "sha256": "a668547b83da59d9bdcc3570a79ec6b4dde24009594decea8eac8245c743390d"
+  },
+  "us_tips_refcpi": {
+    "file": "us/fiscaldata_tips_refcpi.json",
+    "url": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/tips_cpi_data_detail?filter=cusip:eq:912810FD5&fields=index_date,ref_cpi&page[size]=10000&sort=index_date",
+    "retrieved": "2026-09-30T20:51:52+00:00",
+    "bytes": 364942,
+    "sha256": "ac9967955197d15da934d7fab908923f70d85e2681b9fa402b931b1a1882e93c"
   }
 }

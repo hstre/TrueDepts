@@ -238,9 +238,57 @@ Inflation ab November 2026.
    nicht auktionierte Instrumente (Bundesschatzbriefe, Finanzierungsschätze bis 2012, Schuldscheindarlehen,
    Daueremissionen, Geldmarktkredite) und durch Verkäufe aus dem Eigenbestand.
 
-Die Ergebnisse erscheinen auf der Website unter „Prüfung“.
+Die Ergebnisse erscheinen auf der Website unter „Prüfung“. Für die USA werden Rendite-Nachrechnung und Kostenidentität
+ebenso geprüft.
 
-## 7. Bekannte Grenzen
+## 7. Länder, Staatsebenen und Vergleich (G20)
+
+### 7.1 Abdeckung
+| Land | Einzelemissionen (Jahrgangskosten) | Zentralstaat, gezahlte Zinsen | Gesamtstaat |
+|---|---|---|---|
+| Deutschland | ab 1999 berechnet (Finanzagentur); 1960–1998 modellierte Größenordnung | amtlich ab 1995, Weltbank davor | IWF; VGR-Zinsausgaben (amtlich) ab 1970 |
+| Vereinigte Staaten | ab 1979 berechnet (FiscalData, alle Auktionen) | amtlich (FiscalData) ab 2011, Weltbank davor | IWF |
+| übrige G20 | keine – Quellen im Verzeichnis, Import nicht umgesetzt | Weltbank | IWF |
+
+Jede Zahl trägt ihren Status. Aus gesamten Zinszahlungen oder Schuldenständen werden für kein Land Jahrgangswerte abgeleitet.
+
+### 7.2 Staatsebenen
+- **Zentralstaat:** Deutschland = Bund; USA = Bundesregierung (Treasury, nur marktfähige Wertpapiere; ohne intragouvernementale
+  Schulden wie die Treuhandfonds der Sozialversicherung). Die Jahrgangsberechnung betrifft immer nur diese Ebene.
+- **Gesamtstaat:** zusätzlich Länder/Bundesstaaten, Gemeinden und (je nach Land) Sozialversicherung. Für alle G20 aus dem
+  IWF World Economic Outlook: Nettozinsen = Primärsaldo − Finanzierungssaldo (% des BIP, abgeleitet; Zinsausgaben minus
+  Zinseinnahmen) und Bruttoschulden (% des BIP). Die Zusammensetzung laut IWF-Metadaten und das Haushaltsjahr werden je Land
+  angezeigt; Jahre nach dem letzten Ist-Jahr sind IWF-Projektionen.
+
+### 7.3 US-Konventionen
+- Valuta = veröffentlichtes Issue Date; Zinslaufbeginn = Dated Date; langer/kurzer erster Kupon laut FiscalData.
+- Notes/Bonds: halbjährliche Kupons, act/act, Monatsende-Regel. Fehlt bei älteren Auktionen der Kurs, wird er aus der
+  veröffentlichten Rendite berechnet (ausgewiesen; von der Rendite-Nachrechnung ausgenommen).
+- Bills: Kurs aus Diskontsatz (act/360, auf drei Stellen gerundet), Prüfung gegen die Investment Rate.
+- TIPS: Der veröffentlichte Kurs enthält bereits die Index-Verhältniszahl; gerechnet wird mit dem realen Kurs. Index-Verhältniszahlen
+  aus amtlichen Referenz-CPI-Werten ab Mai 2008; davor Interpolation zwischen amtlichen Referenz-CPI-Werten der Emissionstage
+  (modelliert); nach dem letzten amtlichen Wert Projektion mit 0/2/4 % Inflation; Deflationsschutz der Rückzahlung.
+- FRN: Kupon = Rendite der jeweils letzten 13-Wochen-Bill (aus denselben Daten) + fester Aufschlag, vereinfacht täglich act/360;
+  künftiger Index: letzter Wert ±2 %-Punkte (Projektion).
+- Zugeteiltes Volumen einschließlich Zuteilungen an die Federal Reserve (SOMA); ausgewiesen.
+- Brutto/Tilgungen werden aus den Auktionsdaten summiert; Tilgungen vor 2010 unvollständig (vor 1979 begebene Papiere fehlen).
+
+### 7.4 Vergleichsmaßstab
+Beträge in Landeswährung sind zwischen Ländern und Jahrzehnten kaum vergleichbar. Deshalb zusätzlich:
+```
+Kosten je 100 Erlös          = Finanzierungskosten bis Fälligkeit / Emissionserlös × 100   (über die gesamte Laufzeit)
+je 100 und Laufzeitjahr      = Kosten je 100 Erlös / volumengewichtete Ø Laufzeit
+Ø Emissionsrendite           = volumengewichtet über alle Emissionen des Jahres
+```
+Lange Kredite können insgesamt mehr Zinsen kosten und trotzdem günstigere jährliche Konditionen haben; die Laufzeit steht deshalb
+immer neben dem Gesamtwert. US-Jahrgänge sind wegen der vielen Bills sehr kurzlaufend (Ø um 1–2 Jahre), deutsche Jahrgänge länger.
+
+### 7.5 Politische Zuordnung
+Die Zuordnung zu Regierungen nach Emissionstag ist zeitlich, nicht rechtlich (Kreditermächtigung und Schuldenobergrenze liegen beim
+Parlament). Für eine Einordnung zeigt die Regierungsansicht zusätzlich das **Zinsniveau** der Amtszeit (Ø Emissionsrendite) und die
+**übernommenen Fälligkeiten** (Rückzahlungen in der Amtszeit aus Emissionen früherer Regierungen, nur erfasste Emissionen).
+
+## 8. Bekannte Grenzen
 
 - Vor 1999 gibt es in den verwendeten Quellen keine Einzelemissionen → für 1960–1998 nur eine modellierte
   Größenordnung aus Bundesbank-Aggregaten (4.9), für 1945–1959 „keine ausreichenden Daten“.

@@ -4,8 +4,8 @@ Die Website zeigt dieses Verzeichnis (über site/data/sources.json) in der Quell
 """
 
 FA = "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren"
-WB_COUNTRIES = "DEU;FRA;ITA;ESP;NLD;AUT;GBR;USA;JPN"
-IMF_COUNTRIES = "DEU/FRA/ITA/ESP/NLD/AUT/GBR/USA/JPN"
+G20 = ["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN", "ITA", "JPN", "KOR", "MEX", "RUS", "SAU", "ZAF", "TUR", "GBR", "USA"]
+WB_COUNTRIES = ";".join(G20)
 
 SOURCES = {
     "de_emissionshistorie": {
@@ -144,6 +144,51 @@ SOURCES = {
         "file": "de/bundesbank_umlaufrendite.csv",
         "used_for": "Modell 1960–1998: Ersatzrendite für Monate, in denen Volumen begeben, aber keine Emissionsrendite veröffentlicht wurde.",
     },
+    "us_auctions": {
+        "title": "Treasury Securities Auctions Data (alle Auktionen seit 1979)",
+        "publisher": "U.S. Department of the Treasury, Bureau of the Fiscal Service (FiscalData)",
+        "kind": "amtlich",
+        "country": "US",
+        "landing": "https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/",
+        "download": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query?fields=cusip,security_type,security_term,auction_date,issue_date,maturity_date,dated_date,first_int_payment_date,first_int_period,int_payment_frequency,int_rate,price_per100,accrued_int_per100,adj_price,high_yield,high_discnt_rate,high_investment_rate,high_discnt_margin,spread,floating_rate,inflation_index_security,index_ratio_on_issue_date,ref_cpi_on_issue_date,ref_cpi_on_dated_date,total_accepted,comp_accepted,noncomp_accepted,soma_accepted,offering_amt,reopening,original_issue_date,cash_management_bill_cmb,series&page[size]=10000&sort=auction_date",
+        "pages": 2,
+        "file": "us/fiscaldata_auctions.json",
+        "used_for": "Jede einzelne Auktion von Bills, Notes, Bonds, TIPS und FRN: Kurs, Stückzinsen, Kupon, Laufzeit, "
+                    "zugeteiltes Volumen. Grundlage der US-Jahrgangskosten.",
+    },
+    "us_interest_expense": {
+        "title": "Interest Expense on the Public Debt Outstanding (monatlich ab Mai 2010)",
+        "publisher": "U.S. Department of the Treasury, Bureau of the Fiscal Service (FiscalData)",
+        "kind": "amtlich",
+        "country": "US",
+        "landing": "https://fiscaldata.treasury.gov/datasets/interest-expense-debt-outstanding/",
+        "download": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/interest_expense?page[size]=10000&sort=record_date",
+        "pages": 1,
+        "file": "us/fiscaldata_interest_expense.json",
+        "used_for": "Tatsächlich gezahlte bzw. aufgelaufene Zinsen auf die Bundesschuld je Kalenderjahr (Vergleichszahl, ab 2011 vollständig).",
+    },
+    "bbk_vgr_interest": {
+        "title": "Zinsausgaben des Staates (Gesamtstaat, VGR/ESVG 2010), jährlich ab 1970",
+        "publisher": "Deutsche Bundesbank / Statistisches Bundesamt (Zeitreihe BBGFS1.A.BJ9182)",
+        "kind": "amtlich",
+        "country": "DE",
+        "landing": "https://www.bundesbank.de/dynamic/action/de/statistiken/zeitreihen-datenbanken/zeitreihen-datenbank/723452/723452?tsId=BBGFS1.A.BJ9182",
+        "download": "https://api.statistiken.bundesbank.de/rest/data/BBGFS1/A.BJ9182?format=csv",
+        "file": "de/bundesbank_vgr_zinsausgaben_staat.csv",
+        "used_for": "Gesamtstaat-Ansicht: Zinsausgaben von Bund, Ländern, Gemeinden und Sozialversicherung (periodengerecht, VGR).",
+    },
+    "us_tips_refcpi": {
+        "title": "TIPS: tägliche Referenz-CPI-Werte (ab Mai 2008)",
+        "publisher": "U.S. Department of the Treasury, Bureau of the Fiscal Service (FiscalData, TIPS CPI Data)",
+        "kind": "amtlich",
+        "country": "US",
+        "landing": "https://fiscaldata.treasury.gov/datasets/tips-cpi-data/",
+        "download": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/tips_cpi_data_detail?filter=cusip:eq:912810FD5&fields=index_date,ref_cpi&page[size]=10000&sort=index_date",
+        "pages": 1,
+        "file": "us/fiscaldata_tips_refcpi.json",
+        "used_for": "Index-Verhältniszahlen der TIPS (Referenz-CPI / Referenz-CPI am Zinslaufbeginn). Vor Mai 2008: Interpolation "
+                    "zwischen den amtlichen Referenz-CPI-Werten der Emissionstage (modelliert).",
+    },
     "wb_interest": {
         "title": "World Development Indicators: Interest payments (current LCU), GC.XPN.INTP.CN",
         "publisher": "Weltbank (Datenbasis: IWF Government Finance Statistics)",
@@ -155,31 +200,60 @@ SOURCES = {
         "used_for": "Gezahlte Zinsen des Zentralstaats in Landeswährung als Vergleichszahl für Jahre und Länder "
                     "ohne amtliche Einzeldaten. Nicht für Jahrgangskosten verwendbar.",
     },
-    "imf_debt": {
-        "title": "World Economic Outlook: General government gross debt (% of GDP), GGXWDG_NGDP",
-        "publisher": "Internationaler Währungsfonds (IWF), DataMapper-API",
+    "imf_weo": {
+        "title": "World Economic Outlook: Finanzierungssaldo, Primärsaldo und Bruttoschulden des Gesamtstaats (% des BIP)",
+        "publisher": "Internationaler Währungsfonds (IWF), SDMX-Schnittstelle, Datensatz IMF.RES:WEO",
         "kind": "international",
         "country": None,
-        "landing": "https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO",
-        "download": f"https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP/{IMF_COUNTRIES}",
-        "file": "intl/imf_GGXWDG_NGDP.json",
-        "used_for": "Kontext: Schuldenstand des Gesamtstaats in % des BIP. Ein Schuldenstand erlaubt keine "
-                    "Rekonstruktion der Kosten eines Kreditjahrgangs und wird dafür nicht verwendet.",
+        "landing": "https://www.imf.org/en/Publications/WEO",
+        "download": "https://api.imf.org/external/sdmx/2.1/data/IMF.RES,WEO,9.0.0/" + "+".join(G20)
+                    + ".GGXCNL_NGDP+GGXONLB_NGDP+GGXWDG_NGDP.A?format=csv",
+        "accept": "application/vnd.sdmx.data+csv;version=1.0.0",
+        "file": "intl/imf_weo_g20.csv",
+        "used_for": "Gesamtstaat (alle Ebenen): Nettozinsausgaben = Primärsaldo − Finanzierungssaldo (in % des BIP, abgeleitet) "
+                    "und Schuldenstand. Werte nach dem letzten Ist-Jahr sind IWF-Projektionen. Nicht für Jahrgangskosten verwendbar.",
     },
 }
 
-# Quellen, die für weitere Länder geprüft, aber noch nicht importiert sind.
+# Amtliche Quellen für Einzelemissionen weiterer Länder: erfasst, aber (noch) nicht importiert.
+# "check" dokumentiert den Stand der automatischen Abrufprüfung aus dieser Arbeitsumgebung.
 CANDIDATES = [
+    {"country": "GB", "title": "UK Debt Management Office – Gilt Issuance History (Bericht D2.1E) und Gilts in Issue (D1A)",
+     "url": "https://www.dmo.gov.uk/data/gilt-market/", "check": "maschinenlesbar abrufbar (XML, Emissionen seit 1981)",
+     "note": "Fälligkeitstermine getilgter Gilts und RPI-Indexverhältnisse der inflationsindexierten Gilts fehlen noch; Import vorbereitet."},
+    {"country": "CA", "title": "Bank of Canada – Government of Canada bond and bill auction results",
+     "url": "https://www.bankofcanada.ca/markets/government-securities-auctions/", "check": "Valet-API erreichbar, Auktionsreihen nicht geprüft",
+     "note": "Import nicht umgesetzt."},
     {"country": "FR", "title": "Agence France Trésor – Résultats des adjudications",
-     "url": "https://www.aft.gouv.fr/fr/resultats-adjudications", "note": "Einzelauktionen OAT/BTAN/BTF; Import noch nicht umgesetzt."},
+     "url": "https://www.aft.gouv.fr/fr/resultats-adjudications", "check": "automatischer Abruf blockiert (HTTP 403)",
+     "note": "Einzelauktionen OAT/BTF; Import nicht umgesetzt."},
     {"country": "IT", "title": "Dipartimento del Tesoro – Risultati delle aste",
-     "url": "https://www.dt.mef.gov.it/it/debito_pubblico/emissioni_titoli_di_stato_interni/", "note": "Einzelauktionen BTP/BOT/CCTeu (variabel verzinst); Import noch nicht umgesetzt."},
-    {"country": "US", "title": "TreasuryDirect – Auction query / FiscalData",
-     "url": "https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/", "note": "Maschinenlesbare Auktionsdaten seit 1979; Import noch nicht umgesetzt."},
-    {"country": "GB", "title": "UK Debt Management Office – Gilt auction results",
-     "url": "https://www.dmo.gov.uk/data/gilt-market/", "note": "Einzelauktionen und Syndikate; Import noch nicht umgesetzt."},
-    {"country": "AT", "title": "OeBFA – Emissionen", "url": "https://www.oebfa.at/", "note": "Import noch nicht umgesetzt."},
-    {"country": "NL", "title": "DSTA – Auction results", "url": "https://www.dsta.nl/", "note": "Import noch nicht umgesetzt."},
-    {"country": "ES", "title": "Tesoro Público – Resultados de subastas", "url": "https://www.tesoro.es/", "note": "Import noch nicht umgesetzt."},
-    {"country": "JP", "title": "Ministry of Finance Japan – JGB auction results", "url": "https://www.mof.go.jp/english/policy/jgbs/auction/", "note": "Import noch nicht umgesetzt."},
+     "url": "https://www.dt.mef.gov.it/it/debito_pubblico/emissioni_titoli_di_stato_interni/", "check": "automatischer Abruf blockiert (HTTP 403)",
+     "note": "Einzelauktionen BTP/BOT/CCTeu (variabel verzinst); Import nicht umgesetzt."},
+    {"country": "AU", "title": "Australian Office of Financial Management – Tender results",
+     "url": "https://www.aofm.gov.au/", "check": "automatischer Abruf blockiert (HTTP 403)", "note": "Import nicht umgesetzt."},
+    {"country": "JP", "title": "Ministry of Finance Japan – JGB auction results",
+     "url": "https://www.mof.go.jp/english/policy/jgbs/auction/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "IN", "title": "Reserve Bank of India – Auction results of government securities",
+     "url": "https://www.rbi.org.in/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "BR", "title": "Tesouro Nacional – Resultados dos leilões",
+     "url": "https://www.tesourotransparente.gov.br/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "MX", "title": "Banco de México – Subastas de valores gubernamentales",
+     "url": "https://www.banxico.org.mx/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "KR", "title": "Ministry of Economy and Finance – KTB auction results",
+     "url": "https://ktb.moef.go.kr/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "ZA", "title": "National Treasury – Government bond auction results",
+     "url": "https://www.treasury.gov.za/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "TR", "title": "Hazine ve Maliye Bakanlığı – İhale sonuçları",
+     "url": "https://www.hmb.gov.tr/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "ID", "title": "Kementerian Keuangan (DJPPR) – Hasil lelang SBN",
+     "url": "https://www.djppr.kemenkeu.go.id/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "CN", "title": "Ministry of Finance / ChinaBond – Treasury bond issuance",
+     "url": "https://www.chinabond.com.cn/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "AR", "title": "Ministerio de Economía – Licitaciones de títulos públicos",
+     "url": "https://www.argentina.gob.ar/economia/finanzas", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "RU", "title": "Ministry of Finance of Russia – OFZ auction results",
+     "url": "https://minfin.gov.ru/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
+    {"country": "SA", "title": "National Debt Management Center – Sukuk issuance",
+     "url": "https://www.ndmc.gov.sa/", "check": "nicht geprüft", "note": "Import nicht umgesetzt."},
 ]

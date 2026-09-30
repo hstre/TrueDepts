@@ -82,6 +82,11 @@ def add_months(d: dt.date, months: int) -> dt.date:
     raise ValueError(d)
 
 
+def month_end(d: dt.date) -> dt.date:
+    nxt = dt.date(d.year + (d.month == 12), d.month % 12 + 1, 1)
+    return nxt - dt.timedelta(days=1)
+
+
 # ---------------------------------------------------------------------------
 # Kuponkalender und Stückzinsen (act/act ICMA)
 # ---------------------------------------------------------------------------
@@ -101,12 +106,19 @@ class Schedule:
     Teilkupons auf zwei Zahlungsjahre und die Stückzinsen bei Valuta vor dem ersten Kupon.
     """
 
-    def __init__(self, maturity: dt.date, interest_start: dt.date, freq: int = 1, long_first: bool = False):
+    def __init__(self, maturity: dt.date, interest_start: dt.date, freq: int = 1, long_first: bool = False,
+                 eom: bool = False):
+        """eom: Monatsende-Regel (US-Treasuries): Fällt die Fälligkeit auf ein Monatsende, liegen alle
+        Kupontermine auf Monatsenden."""
         step = 12 // freq
+        eom = eom and (maturity + dt.timedelta(days=1)).day == 1
         grid = [maturity]
         k = 1
         while grid[-1] > interest_start:
-            grid.append(add_months(maturity, -step * k))
+            d = add_months(maturity, -step * k)
+            if eom:
+                d = month_end(d)
+            grid.append(d)
             k += 1
         grid.reverse()
         self.grid = grid
@@ -198,15 +210,19 @@ class Result:
         return sum(f.amount for f in self.flows if f.fixed)
 
 
-def fixed_rate(nominal, coupon, price, settle, maturity, interest_start, freq=1, long_first=False) -> Result:
+def fixed_rate(nominal, coupon, price, settle, maturity, interest_start, freq=1, long_first=False, eom=False,
+               accrued_per100=None) -> Result:
     """Festverzinsliche Anleihe (auch Nullkupon mit coupon=0).
 
     nominal: platzierter Nennwert (Mio.), coupon: Jahreskupon als Dezimalzahl,
     price: sauberer Kurs in % des Nennwerts, settle: Valuta.
     """
-    sch = Schedule(maturity, interest_start, freq, long_first)
+    sch = Schedule(maturity, interest_start, freq, long_first, eom)
     per = coupon / freq
-    ai = nominal * per * sch.accrued(settle) if coupon else 0.0
+    if accrued_per100 is not None:
+        ai = nominal * accrued_per100 / 100  # veröffentlichte Stückzinsen
+    else:
+        ai = nominal * per * sch.accrued(settle) if coupon else 0.0
     clean = nominal * price / 100.0
     res = Result(proceeds=clean + ai, clean_proceeds=clean, accrued=ai, redemption=nominal)
     res.cash.append((settle, "Emissionserlös", -(clean + ai)))
@@ -264,16 +280,19 @@ SCENARIOS = {"low": 0.0, "mid": 0.02, "high": 0.04}
 
 
 def inflation_linked(nominal, coupon, price, settle, maturity, interest_start, ratio: IndexRatio,
-                     scenarios=SCENARIOS, long_first=False) -> Result:
+                     scenarios=SCENARIOS, long_first=False, freq=1, eom=False, accrued_real_per100=None) -> Result:
     """Inflationsindexierte Bundesanleihe (Kapital und Kupons an HVPI ohne Tabak gekoppelt).
 
     Rückzahlung = Nennwert × max(Index-Verhältniszahl bei Fälligkeit, 1) (Deflationsschutz).
     Kurs und Stückzinsen werden real notiert und mit der Index-Verhältniszahl der Valuta
     multipliziert.
     """
-    sch = Schedule(maturity, interest_start, 1, long_first)
+    sch = Schedule(maturity, interest_start, freq, long_first, eom)
     ir_s = ratio(settle)
-    ai = nominal * coupon * sch.accrued(settle) * ir_s
+    if accrued_real_per100 is not None:
+        ai = nominal * accrued_real_per100 / 100 * ir_s
+    else:
+        ai = nominal * coupon / freq * sch.accrued(settle) * ir_s
     clean = nominal * price / 100.0 * ir_s
     lo_i, mid_i, hi_i = scenarios["low"], scenarios["mid"], scenarios["high"]
     red_mid = nominal * max(ratio(maturity, mid_i), 1.0)
@@ -282,7 +301,7 @@ def inflation_linked(nominal, coupon, price, settle, maturity, interest_start, r
     if ai:
         res.flows.append(Flow(settle, "accrued", -ai, realized=ratio.known(settle)))
     for c, frac, _ in sch.next_payments(settle):
-        base_amt = nominal * coupon * frac
+        base_amt = nominal * coupon / freq * frac
         if ratio.known(c):
             amt = base_amt * ratio(c)
             res.flows.append(Flow(c, "coupon", amt, fixed=True, realized=True))
@@ -309,12 +328,12 @@ def inflation_linked(nominal, coupon, price, settle, maturity, interest_start, r
 # ---------------------------------------------------------------------------
 
 
-def isma_yield(coupon, price, settle, maturity, interest_start, freq=1, long_first=False) -> float:
+def isma_yield(coupon, price, settle, maturity, interest_start, freq=1, long_first=False, eom=False) -> float:
     """Rendite nach ICMA (Barwert mit Periodenzins y/freq) aus sauberem Kurs.
 
     Für inflationsindexierte Anleihen ergibt dieselbe Formel die reale Rendite.
     """
-    sch = Schedule(maturity, interest_start, freq, long_first)
+    sch = Schedule(maturity, interest_start, freq, long_first, eom)
     per = coupon / freq
     dirty = price + 100 * per * sch.accrued(settle)
     cfs = [(t, 100 * per * frac) for _, frac, t in sch.next_payments(settle)] if coupon else []
@@ -339,3 +358,76 @@ def money_market_yield(price, settle, maturity) -> float:
     """Geldmarktrendite act/360 (Konvention der Bubill-Auktionen)."""
     days = (maturity - settle).days
     return (100 / price - 1) * 360 / days
+
+
+def price_from_yield(coupon, yld, settle, maturity, interest_start, freq=2, long_first=False, eom=False) -> float:
+    """Sauberer Kurs aus Rendite (Umkehrung von isma_yield); für ältere US-Auktionen ohne veröffentlichten Kurs."""
+    lo, hi = 1.0, 300.0
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        if isma_yield(coupon, mid, settle, maturity, interest_start, freq, long_first, eom) > yld:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def bill_price_from_discount(discount_rate, settle, maturity) -> float:
+    """US-Bills: Kurs aus Diskontsatz (act/360)."""
+    return 100 * (1 - discount_rate * (maturity - settle).days / 360)
+
+
+def bill_bond_equivalent_yield(price, settle, maturity) -> float:
+    """US-Bills: „Investment Rate“ (Bond-Equivalent-Yield) wie von Treasury veröffentlicht."""
+    days = (maturity - settle).days
+    one_year = add_months(settle, 12)
+    feb29 = any(settle < dt.date(y, 2, 29) <= one_year for y in (settle.year, settle.year + 1)
+                if y % 4 == 0 and (y % 100 != 0 or y % 400 == 0))
+    Y = 366 if feb29 else 365
+    if days <= Y / 2:
+        return (100 - price) / price * Y / days
+    t = days / Y  # Treasury-Formel für Laufzeiten über einem halben Jahr
+    return (-2 * t + 2 * (t * t - (2 * t - 1) * (1 - 100 / price)) ** 0.5) / (2 * t - 1)
+
+
+def floating_rate(nominal, spread, price, settle, maturity, interest_start, index_rate, last_known: dt.date,
+                  accrued_per100=None, scenarios=(-0.02, 0.0, 0.02)) -> Result:
+    """US-FRN: vierteljährlicher Kupon = Index (13-Wochen-Bill, täglich act/360) + fester Aufschlag.
+
+    index_rate(d) liefert den für Tag d geltenden Indexsatz (dezimal) bis einschließlich last_known.
+    Danach Projektion: letzter Indexsatz + Szenario (tief/mittel/hoch), nicht unter 0.
+    Der Aufschlag (spread) und bekannte Indextage sind feststehend.
+    """
+    sch = Schedule(maturity, interest_start, 4, False, eom=True)
+    clean = nominal * price / 100
+    ai = nominal * accrued_per100 / 100 if accrued_per100 is not None else 0.0
+    res = Result(proceeds=clean + ai, clean_proceeds=clean, accrued=ai, redemption=nominal)
+    res.cash.append((settle, "Emissionserlös", -(clean + ai)))
+    if ai:
+        res.flows.append(Flow(settle, "accrued", -ai))
+    last_rate = index_rate(last_known)
+    prev = interest_start
+    for i in range(1, len(sch.grid)):
+        pay = sch.grid[i]
+        start = max(sch.grid[i - 1], interest_start)
+        if pay <= settle:
+            prev = pay
+            continue
+        fixed_amt = 0.0
+        proj = [0.0, 0.0, 0.0]
+        d = start
+        while d < pay:
+            if d <= last_known:
+                fixed_amt += nominal * (index_rate(d) + spread) / 360
+            else:
+                fixed_amt += nominal * spread / 360
+                for k, sc in enumerate(scenarios):
+                    proj[k] += nominal * max(0.0, last_rate + sc) / 360
+            d += dt.timedelta(days=1)
+        res.flows.append(Flow(pay, "coupon", fixed_amt))
+        if any(proj):
+            res.flows.append(Flow(pay, "coupon", proj[1], fixed=False, low=proj[0], high=proj[2]))
+        res.cash.append((pay, "Kupon", fixed_amt + proj[1]))
+    res.flows.append(Flow(maturity, "discount", nominal - clean))
+    res.cash.append((maturity, "Rückzahlung", nominal))
+    return res

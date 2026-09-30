@@ -1,0 +1,9 @@
+{
+  "country": "US",
+  "name": "Vereinigte Staaten",
+  "scope": "Zentralregierung (U.S. Treasury): alle marktfähigen Treasury-Wertpapiere aus Auktionen (Bills inkl. Cash Management Bills, Notes, Bonds, TIPS, FRN). Nicht enthalten: nicht marktfähige Schulden (u. a. Bestände der Sozialversicherungs- und Treuhandfonds, Sparbriefe), Bundesstaaten und Kommunen. Die Gesamtstaat-Werte des IWF schließen Bundesstaaten und Kommunen ein.",
+  "periods": [
+    {"from": 1945, "to": 1978, "territory": "Vereinigte Staaten", "currency": "US-Dollar", "state": "Bundesregierung (Treasury). Auktionsdaten liegen erst ab 1979 vor."},
+    {"from": 1979, "to": 2100, "territory": "Vereinigte Staaten", "currency": "US-Dollar", "state": "Bundesregierung (Treasury)"}
+  ]
+}
