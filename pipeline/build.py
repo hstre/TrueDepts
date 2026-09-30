@@ -403,6 +403,7 @@ def main():
         "instrument_labels": INSTRUMENT_LABEL | US_INSTRUMENT_LABEL, "method_labels": METHOD_LABEL,
     })
     (SITE.parent / "METHODE.md").write_bytes((ROOT / "docs" / "METHODE.md").read_bytes())
+    (SITE / "impressum.json").write_bytes((META / "impressum.json").read_bytes())
     print(f"{len(auctions)} Emissionen, Jahre {FIRST_YEAR}–{today.year} geschrieben nach {SITE.relative_to(ROOT)}")
 
 

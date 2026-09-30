@@ -290,6 +290,8 @@
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     try {
       if (parts[0] === "quellen") { setNav("quellen"); await viewSources(); }
+      else if (parts[0] === "worum-geht-es") { setNav("einfach"); await viewExplainer(); }
+      else if (parts[0] === "impressum") { setNav("impressum"); await viewImprint(); }
       else if (parts[0] === "methode") { setNav("methode"); await viewMethod(); }
       else if (parts[0] === "pruefung") { setNav("pruefung"); await viewVerification(); }
       else if (parts[0] === "regierungen") { setNav("regierungen"); await viewGovernments((parts[1] || "").toUpperCase()); }
@@ -324,7 +326,7 @@
       onclick: () => { location.hash = `#/${state.country}/${state.year - 1}`; } }, "‹");
     const next = h("button", { class: "btn", type: "button", "aria-label": "Folgejahr", disabled: state.year >= countries.last_year ? true : null,
       onclick: () => { location.hash = `#/${state.country}/${state.year + 1}`; } }, "›");
-    return h("div", { class: "controls" },
+    return h("div", { class: "controls" }, h("a", { href: "#/worum-geht-es", class: "intro-link" }, "Neu hier? Worum geht es auf dieser Seite →"),
       h("label", { for: "country" }, "Land", cSel),
       h("label", { for: "year" }, "Jahr", h("span", { class: "year-step" }, prev, ySel, next)));
   }
@@ -888,6 +890,89 @@
         "Ø Emissionsrendite: volumengewichtet über alle Emissionen einschließlich kurzlaufender Geldmarktpapiere. ",
         hasModel ? "Die modellierte Spalte stammt aus Bundesbank-Aggregaten mit Laufzeitannahmen und ist nicht gleichwertig mit den berechneten Werten. " : "",
         c.code === "DE" ? "Beträge vor 1999 von D-Mark in Euro umgerechnet, nicht inflationsbereinigt." : "Nominal, nicht inflationsbereinigt."));
+  }
+
+  // ------------------------------------------------------------------ Worum geht es? (einfach erklärt)
+  async function viewExplainer() {
+    CUR = "EUR";
+    const years = [2026, 2027, 2028, 2029, 2030, 2031];
+    const budget = [-18.7, 131.17, 108.32, 108.32, 108.32, 174.05];
+    const vintage = [611.47, 0, 0, 0, 0, 0];
+    const box1 = h("div", { class: "chart" }), box2 = h("div", { class: "chart" });
+    const sec = (title, ...body) => h("section", { class: "card" }, h("h2", null, title), ...body);
+    app.replaceChildren(h("div", { class: "doc" },
+      h("h1", null, "Worum geht es? Einfach erklärt"),
+      h("p", { class: "lead" }, "Wenn ein Staat Geld leiht, zahlt er dafür Zinsen – oft viele Jahre lang. Diese Seite zeigt, in welchem Jahr diese Zinsen ",
+        h("em", null, "versprochen"), " wurden. Nicht nur, wann sie ", h("em", null, "bezahlt"), " werden."),
+      sec("Ein Vergleich aus dem Alltag",
+        h("p", null, "Stell dir vor, jemand schließt heute einen Handyvertrag über fünf Jahre ab. Bezahlt wird jeden Monat ein bisschen – die Entscheidung fiel aber heute. ",
+          "Wer später den Vertrag übernimmt, muss weiterzahlen, obwohl er ihn nicht abgeschlossen hat."),
+        h("p", null, "Beim Staat ist es ähnlich: Eine Regierung nimmt Kredite auf, die Zinsen fallen über viele Jahre an. Im Haushalt steht aber immer nur, was ", h("em", null, "in diesem Jahr"),
+          " an Zinsen bezahlt wird – egal, welche Regierung den Kredit aufgenommen hat.")),
+      sec("Was diese Seite anders macht",
+        h("p", null, "Sie rechnet für jeden einzelnen Kredit aus, wie viel Zinsen er bis zum Ende kostet, und ordnet diese Summe dem Jahr zu, in dem der Kredit aufgenommen wurde. ",
+          "Ein echtes Beispiel: Im September 2026 lieh sich der Bund 3,7 Mrd. € für fünf Jahre (Bundesobligation). Bis 2031 kostet das 611 Mio. € Zinsen."),
+        h("div", { class: "two-col" },
+          h("div", null, h("h3", null, "So zeigt es der Haushalt"), h("p", { class: "muted" }, "Zinsen verteilt auf die Jahre, in denen sie gezahlt werden. 2026 sogar leicht negativ, weil der Käufer bei Kauf aufgelaufene Zinsen (Stückzinsen) mitbezahlt."), box1),
+          h("div", null, h("h3", null, "So zeigt es diese Seite"), h("p", { class: "muted" }, "Die gesamte Zinslast von 611 Mio. € steht im Jahr der Entscheidung: 2026."), box2))),
+      sec("Was dadurch sichtbar wird",
+        h("ul", null,
+          h("li", null, h("strong", null, "Welche Lasten eine Regierung hinterlässt. "), "Zinsen aus Krediten von heute müssen oft spätere Regierungen bezahlen."),
+          h("li", null, h("strong", null, "Wie stark das Zinsniveau zählt. "), "2016–2021 bekam der Bund teils mehr Geld, als er zurückzahlen muss (negative Zinsen). Seit 2022 kosten neue Kredite wieder deutlich mehr."),
+          h("li", null, h("strong", null, "Dass der größte Teil neuer Kredite alte Kredite ersetzt. "), "Wird ein Kredit fällig, leiht sich der Staat meist neues Geld, um ihn zurückzuzahlen (Anschlussfinanzierung). Nur ein kleinerer Teil ist echte neue Verschuldung."),
+          h("li", null, h("strong", null, "Wie teuer Kredite im Vergleich sind. "), "„Kosten je 100 € Erlös“ zeigt, wie viel Zinsen der Staat für jeweils 100 € geliehenes Geld bis zum Ende zahlt – vergleichbar zwischen Jahren und Ländern. Die Laufzeit gehört immer dazu: Ein langer Kredit kostet insgesamt mehr, kann aber pro Jahr günstiger sein."))),
+      sec("Was diese Seite nicht tut",
+        h("ul", null,
+          h("li", null, "Sie bewertet keine Regierung. Sie ordnet zeitlich zu. Ob ein Kredit sinnvoll war, hängt von vielem ab: Zinsniveau, Krisen, wofür das Geld ausgegeben wurde."),
+          h("li", null, "Sie erfindet keine Zahlen. Wo einzelne Kredite nicht bekannt sind, steht „keine ausreichenden Daten“ – oder eine klar markierte Schätzung."),
+          h("li", null, "Sie sagt nicht voraus, was die spätere Anschlussfinanzierung kostet. Das hängt von künftigen Zinsen ab und wird getrennt gezeigt."))),
+      sec("Woran man erkennt, wie sicher eine Zahl ist",
+        h("ul", { class: "status-legend" },
+          h("li", null, chip("calc"), " – aus jedem einzelnen Kredit nachgerechnet und gegen die veröffentlichten Daten geprüft."),
+          h("li", null, chip("official"), " – so von einer Behörde veröffentlicht."),
+          h("li", null, chip("intl"), " – aus einer internationalen Datenbank (Weltbank, IWF), oft etwas anders abgegrenzt."),
+          h("li", null, chip("model"), " – geschätzt mit einer offen beschriebenen Annahme."),
+          h("li", null, chip("proj"), " – hängt von der Zukunft ab, etwa der Inflation; deshalb als Spanne."),
+          h("li", null, chip("none"), " – dafür gibt es keine verlässlichen Daten."))),
+      sec("Wer steckt dahinter?",
+        h("p", null, "Ein unabhängiges Projekt. Alle Rohdaten stammen aus öffentlichen Quellen und liegen unverändert im ", h("a", { href: "https://github.com/hstre/TrueDepts", rel: "noopener" }, "Quellcode-Repository"), ". ",
+          "Den genauen Rechenweg zeigt die Seite ", h("a", { href: "#/methode" }, "Methode"), ", die Prüfungen die Seite ", h("a", { href: "#/pruefung" }, "Prüfung"), ". Verantwortlich: siehe ", h("a", { href: "#/impressum" }, "Impressum"), "."),
+        h("p", null, h("a", { class: "btn", href: "#/DE/2025" }, "Zur Jahresansicht →")))));
+    const common = { cats: years, height: 180, focusable: false, xEvery: 1, yFormat: t => moneyShort(t) };
+    queueMicrotask(() => {
+      cleanups.push(barChart(box1, { ...common, stacks: [{ color: "var(--series-1)", values: budget }], ariaLabel: "Zinszahlungen nach Zahlungsjahr",
+        tooltip: i => ({ head: String(years[i]), rows: [{ color: "var(--series-1)", value: money(budget[i]), label: "in diesem Jahr gezahlt" }] }) }));
+      cleanups.push(barChart(box2, { ...common, stacks: [{ color: "var(--series-1)", values: vintage }], ariaLabel: "Zinslast dem Aufnahmejahr zugeordnet",
+        tooltip: i => ({ head: String(years[i]), rows: [{ color: "var(--series-1)", value: money(vintage[i]), label: i === 0 ? "gesamte Zinslast bis 2031" : "" }] }) }));
+    });
+  }
+
+  // ------------------------------------------------------------------ Impressum
+  async function viewImprint() {
+    const im = await load("data/impressum.json");
+    const missing = t => h("span", { class: "missing" }, `[${t} fehlt]`);
+    const street = im.street || missing("Straße und Hausnummer");
+    const town = im.postal_code ? `${im.postal_code} ${im.city}` : h("span", null, missing("Postleitzahl"), " ", im.city);
+    app.replaceChildren(h("div", { class: "doc" },
+      h("h1", null, "Impressum"),
+      h("h2", null, "Angaben gemäß § 5 DDG"),
+      h("p", null, im.name, h("br"), street, h("br"), town, h("br"), im.country),
+      h("h2", null, "Kontakt"),
+      h("p", null, "E-Mail: ", im.email ? h("a", { href: `mailto:${im.email}` }, im.email) : missing("E-Mail-Adresse"), im.phone ? h("span", null, h("br"), "Telefon: ", im.phone) : null),
+      h("h2", null, "Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV"),
+      h("p", null, im.name, ", Anschrift wie oben."),
+      h("h2", null, "Haftung für Inhalte"),
+      h("p", null, "Die Inhalte wurden mit Sorgfalt aus öffentlichen Quellen berechnet; Rechenweg und Prüfungen sind offengelegt. Für Richtigkeit, Vollständigkeit und Aktualität wird keine Gewähr übernommen. ",
+        "Die Seite ist keine Anlage-, Steuer- oder Finanzberatung und keine politische Bewertung."),
+      h("h2", null, "Haftung für Links"),
+      h("p", null, "Die Seite verlinkt auf Angebote Dritter (Behörden, internationale Organisationen). Für deren Inhalte sind ausschließlich die jeweiligen Anbieter verantwortlich."),
+      h("h2", null, "Datenschutz"),
+      h("p", null, "Diese Seite wird über GitHub Pages (GitHub Inc., USA) bereitgestellt. Beim Aufruf verarbeitet GitHub technisch notwendige Verbindungsdaten wie die IP-Adresse, um die Seite auszuliefern und abzusichern; Einzelheiten: ",
+        h("a", { href: "https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement", rel: "noopener" }, "Datenschutzerklärung von GitHub"), "."),
+      h("p", null, "Die Seite selbst setzt keine Cookies, verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von Drittanbietern. Nur die Wahl hell/dunkel wird, falls gewählt, lokal im Browser gespeichert (localStorage) und nicht übertragen."),
+      h("p", null, "Betroffene haben nach der DSGVO das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Widerspruch sowie Beschwerde bei einer Aufsichtsbehörde. Kontakt: siehe oben."),
+      h("h2", null, "Quellcode und Daten"),
+      h("p", null, "Quellcode und unveränderte Rohdaten: ", h("a", { href: "https://github.com/hstre/TrueDepts", rel: "noopener" }, "github.com/hstre/TrueDepts"), ". Die Rechte an den Rohdaten liegen bei den jeweiligen Herausgebern (siehe ", h("a", { href: "#/quellen" }, "Quellen"), ").")));
   }
 
   // ------------------------------------------------------------------ Quellen

@@ -224,3 +224,10 @@ footer.site { border-top: 1px solid var(--border); color: var(--text-2); font-si
 .coverage strong { font-weight: 650; }
 .note.compare { border-left-color: var(--series-1); color: var(--text); margin: .25rem 0 .5rem; }
 table.wrap-cells td.r, table.wrap-cells th.r { white-space: normal; }
+.intro-link { flex-basis: 100%; font-size: .9rem; }
+.lead { font-size: 1.1rem; }
+.missing { background: #fbe3e3; color: #8a1c1c; padding: 0 .3rem; border-radius: 3px; font-weight: 600; }
+.status-legend { list-style: none; padding-left: 0; }
+.status-legend li { margin-bottom: .5rem; }
+a.btn { display: inline-block; text-decoration: none; }
+.doc .card > h2 { border-top: none; margin-top: 0; padding-top: 0; }
