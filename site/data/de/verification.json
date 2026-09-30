@@ -1,0 +1,672 @@
+{
+ "checked": "2026-09-30",
+ "yields": {
+  "Kuponanleihen": {
+   "n": 1230,
+   "within_rounding": 1210,
+   "share": 0.9837,
+   "median_abs_diff": 0.0,
+   "max_abs_diff": 0.01,
+   "tolerance_pp": 0.0051
+  },
+  "Bubill": {
+   "n": 780,
+   "within_rounding": 780,
+   "share": 1.0,
+   "median_abs_diff": 0.0002,
+   "max_abs_diff": 0.0051,
+   "tolerance_pp": 0.0051
+  },
+  "USD": {
+   "n": 2,
+   "within_rounding": 2,
+   "share": 1.0,
+   "median_abs_diff": 0.0015,
+   "max_abs_diff": 0.003,
+   "tolerance_pp": 0.0051
+  },
+  "ILB (real)": {
+   "n": 169,
+   "within_rounding": 169,
+   "share": 1.0,
+   "median_abs_diff": 0.0,
+   "max_abs_diff": 0.003,
+   "tolerance_pp": 0.0051
+  }
+ },
+ "yield_outliers": [
+  {
+   "date": "2001-05-16",
+   "isin": "DE0001141372",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": 4.64,
+   "yield_calc": 4.65,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2005-07-20",
+   "isin": "DE0001135275",
+   "instrument": "Bund",
+   "method": "Auk",
+   "yield_pub": 3.78,
+   "yield_calc": 3.79,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2024-04-30",
+   "isin": "DE000BU35025",
+   "instrument": "Green",
+   "method": "Auk",
+   "yield_pub": 2.55,
+   "yield_calc": 2.56,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2012-04-11",
+   "isin": "DE0001135473",
+   "instrument": "Bund",
+   "method": "Auk",
+   "yield_pub": 1.77,
+   "yield_calc": 1.78,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2016-04-06",
+   "isin": "DE0001104636",
+   "instrument": "Schatz",
+   "method": "Auk",
+   "yield_pub": -0.48,
+   "yield_calc": -0.49,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2016-05-11",
+   "isin": "DE0001104644",
+   "instrument": "Schatz",
+   "method": "Auk",
+   "yield_pub": -0.51,
+   "yield_calc": -0.52,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2018-07-25",
+   "isin": "DE0001141786",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": -0.18,
+   "yield_calc": -0.19,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2018-09-18",
+   "isin": "DE0001104735",
+   "instrument": "Schatz",
+   "method": "Auk",
+   "yield_pub": -0.54,
+   "yield_calc": -0.53,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2022-11-22",
+   "isin": "DE0001141869",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": 1.99,
+   "yield_calc": 2.0,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2001-06-13",
+   "isin": "DE0001136943",
+   "instrument": "Schatz",
+   "method": "Auk",
+   "yield_pub": 4.33,
+   "yield_calc": 4.32,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2003-04-23",
+   "isin": "DE0001135218",
+   "instrument": "Bund",
+   "method": "Auk",
+   "yield_pub": 4.17,
+   "yield_calc": 4.18,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2007-02-14",
+   "isin": "DE0001135317",
+   "instrument": "Bund",
+   "method": "Auk",
+   "yield_pub": 4.11,
+   "yield_calc": 4.12,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2009-05-06",
+   "isin": "DE0001141547",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": 2.41,
+   "yield_calc": 2.42,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2023-03-14",
+   "isin": "DE000BU25000",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": 2.43,
+   "yield_calc": 2.44,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2023-05-09",
+   "isin": "DE000BU25000",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": 2.27,
+   "yield_calc": 2.28,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2023-07-26",
+   "isin": "DE000BU27006",
+   "instrument": "Bund",
+   "method": "Auk",
+   "yield_pub": 2.45,
+   "yield_calc": 2.46,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2023-10-04",
+   "isin": "DE000BU27006",
+   "instrument": "Bund",
+   "method": "Auk",
+   "yield_pub": 2.89,
+   "yield_calc": 2.9,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2024-09-10",
+   "isin": "DE000BU35025",
+   "instrument": "Green",
+   "method": "M-A",
+   "yield_pub": 2.02,
+   "yield_calc": 2.03,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2026-02-11",
+   "isin": "DE000BU2D012",
+   "instrument": "Bund",
+   "method": "M-A",
+   "yield_pub": 3.47,
+   "yield_calc": 3.48,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  },
+  {
+   "date": "2026-03-03",
+   "isin": "DE000BU25067",
+   "instrument": "Bobl",
+   "method": "Auk",
+   "yield_pub": 2.43,
+   "yield_calc": 2.44,
+   "diff": 0.01,
+   "settle_rule": "T+2"
+  }
+ ],
+ "identity": {
+  "n": 2181,
+  "failures": 0,
+  "examples": []
+ },
+ "volumes": {
+  "n": 1549,
+  "match": 1528,
+  "share": 0.9864,
+  "largest_differences": [
+   {
+    "isin": "DE0001136869",
+    "date": "1999-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 7000.0,
+    "diff": -2000.0
+   },
+   {
+    "isin": "DE0001136869",
+    "date": "2000-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 7000.0,
+    "diff": -2000.0
+   },
+   {
+    "isin": "DE0001141299",
+    "date": "1999-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141299",
+    "date": "2000-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141299",
+    "date": "2001-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141299",
+    "date": "2002-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141307",
+    "date": "1999-12-31",
+    "emissions_cum": 7000.0,
+    "outstanding": 8000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141307",
+    "date": "2000-12-31",
+    "emissions_cum": 7000.0,
+    "outstanding": 8000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141307",
+    "date": "2001-12-31",
+    "emissions_cum": 7000.0,
+    "outstanding": 8000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141307",
+    "date": "2002-12-31",
+    "emissions_cum": 7000.0,
+    "outstanding": 8000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141307",
+    "date": "2003-12-31",
+    "emissions_cum": 7000.0,
+    "outstanding": 8000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141331",
+    "date": "1999-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141331",
+    "date": "2000-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141331",
+    "date": "2001-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141331",
+    "date": "2002-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141331",
+    "date": "2003-12-31",
+    "emissions_cum": 5000.0,
+    "outstanding": 6000.0,
+    "diff": -1000.0
+   },
+   {
+    "isin": "DE0001141372",
+    "date": "2000-12-31",
+    "emissions_cum": 0,
+    "outstanding": 641.2,
+    "diff": -641.2
+   },
+   {
+    "isin": "DE0001141299",
+    "date": "1998-12-31",
+    "emissions_cum": 0,
+    "outstanding": 564.4,
+    "diff": -564.4
+   },
+   {
+    "isin": "DE0001141398",
+    "date": "2001-12-31",
+    "emissions_cum": 0,
+    "outstanding": 166.4,
+    "diff": -166.4
+   },
+   {
+    "isin": "DE0001141414",
+    "date": "2002-12-31",
+    "emissions_cum": 0,
+    "outstanding": 145.3,
+    "diff": -145.3
+   }
+  ]
+ },
+ "row_volumes": {
+  "n": 2330,
+  "inconsistent": 38,
+  "examples": [
+   {
+    "date": "1999-01-13",
+    "isin": "DE0001114296",
+    "issue_volume": 5000.0,
+    "allotted": 4869.0,
+    "retained": 0.0
+   },
+   {
+    "date": "1999-02-17",
+    "isin": "DE0001141299",
+    "issue_volume": 5000.0,
+    "allotted": 4461.8,
+    "retained": 507.7966
+   },
+   {
+    "date": "1999-04-14",
+    "isin": "DE0001114304",
+    "issue_volume": 5000.0,
+    "allotted": 5033.0,
+    "retained": 0.0
+   },
+   {
+    "date": "1999-05-19",
+    "isin": "DE0001141307",
+    "issue_volume": 7000.0,
+    "allotted": 5681.6,
+    "retained": 1568.4152
+   },
+   {
+    "date": "1999-07-14",
+    "isin": "DE0001114312",
+    "issue_volume": 5000.0,
+    "allotted": 4933.0,
+    "retained": 0.0
+   },
+   {
+    "date": "1999-10-13",
+    "isin": "DE0001114320",
+    "issue_volume": 5000.0,
+    "allotted": 4962.0,
+    "retained": 0.0
+   },
+   {
+    "date": "1999-11-17",
+    "isin": "DE0001141331",
+    "issue_volume": 5000.0,
+    "allotted": 4045.0,
+    "retained": 1281.1916
+   },
+   {
+    "date": "2000-01-12",
+    "isin": "DE0001114338",
+    "issue_volume": 5000.0,
+    "allotted": 4811.0,
+    "retained": 0.0
+   },
+   {
+    "date": "2000-02-16",
+    "isin": "DE0001141349",
+    "issue_volume": 6000.0,
+    "allotted": 4745.0,
+    "retained": 948.7227
+   },
+   {
+    "date": "2000-04-12",
+    "isin": "DE0001114346",
+    "issue_volume": 5000.0,
+    "allotted": 5125.0,
+    "retained": 0.0
+   },
+   {
+    "date": "2000-05-17",
+    "isin": "DE0001141356",
+    "issue_volume": 6000.0,
+    "allotted": 4773.2,
+    "retained": 542.46
+   },
+   {
+    "date": "2000-07-12",
+    "isin": "DE0001114353",
+    "issue_volume": 5000.0,
+    "allotted": 4873.0,
+    "retained": 0.0
+   },
+   {
+    "date": "2000-08-16",
+    "isin": "DE0001141364",
+    "issue_volume": 6000.0,
+    "allotted": 5414.0,
+    "retained": 321.52
+   },
+   {
+    "date": "2000-10-11",
+    "isin": "DE0001114361",
+    "issue_volume": 5000.0,
+    "allotted": 4861.0,
+    "retained": 0.0
+   },
+   {
+    "date": "2001-01-10",
+    "isin": "DE0001114379",
+    "issue_volume": 5000.0,
+    "allotted": 5052.0,
+    "retained": 0.0
+   }
+  ]
+ },
+ "coverage": {
+  "1999": {
+   "allotted": 104798.4,
+   "gross_official": 219251.0,
+   "share": 0.478,
+   "complete_year": true
+  },
+  "2000": {
+   "allotted": 100373.0,
+   "gross_official": 145487.6,
+   "share": 0.6899,
+   "complete_year": true
+  },
+  "2001": {
+   "allotted": 114416.1,
+   "gross_official": 149044.8,
+   "share": 0.7677,
+   "complete_year": true
+  },
+  "2002": {
+   "allotted": 165835.4,
+   "gross_official": 203681.9,
+   "share": 0.8142,
+   "complete_year": true
+  },
+  "2003": {
+   "allotted": 188322.4,
+   "gross_official": 241360.2,
+   "share": 0.7803,
+   "complete_year": true
+  },
+  "2004": {
+   "allotted": 194557.0,
+   "gross_official": 227355.6,
+   "share": 0.8557,
+   "complete_year": true
+  },
+  "2005": {
+   "allotted": 188906.2,
+   "gross_official": 224795.0,
+   "share": 0.8403,
+   "complete_year": true
+  },
+  "2006": {
+   "allotted": 188397.5,
+   "gross_official": 225410.5,
+   "share": 0.8358,
+   "complete_year": true
+  },
+  "2007": {
+   "allotted": 184368.1,
+   "gross_official": 225943.0,
+   "share": 0.816,
+   "complete_year": true
+  },
+  "2008": {
+   "allotted": 170050.0,
+   "gross_official": 237408.8,
+   "share": 0.7163,
+   "complete_year": true
+  },
+  "2009": {
+   "allotted": 265256.7,
+   "gross_official": 331567.2,
+   "share": 0.8,
+   "complete_year": true
+  },
+  "2010": {
+   "allotted": 273132.3,
+   "gross_official": 320940.1,
+   "share": 0.851,
+   "complete_year": true
+  },
+  "2011": {
+   "allotted": 239299.3,
+   "gross_official": 281969.4,
+   "share": 0.8487,
+   "complete_year": true
+  },
+  "2012": {
+   "allotted": 214199.3,
+   "gross_official": 264047.6,
+   "share": 0.8112,
+   "complete_year": true
+  },
+  "2013": {
+   "allotted": 214187.1,
+   "gross_official": 252009.0,
+   "share": 0.8499,
+   "complete_year": true
+  },
+  "2014": {
+   "allotted": 177916.7,
+   "gross_official": 209960.7,
+   "share": 0.8474,
+   "complete_year": true
+  },
+  "2015": {
+   "allotted": 152533.5,
+   "gross_official": 179717.8,
+   "share": 0.8487,
+   "complete_year": true
+  },
+  "2016": {
+   "allotted": 157713.4,
+   "gross_official": 190876.7,
+   "share": 0.8263,
+   "complete_year": true
+  },
+  "2017": {
+   "allotted": 139161.1,
+   "gross_official": 169475.3,
+   "share": 0.8211,
+   "complete_year": true
+  },
+  "2018": {
+   "allotted": 144555.4,
+   "gross_official": 176578.5,
+   "share": 0.8186,
+   "complete_year": true
+  },
+  "2019": {
+   "allotted": 157534.0,
+   "gross_official": 200150.4,
+   "share": 0.7871,
+   "complete_year": true
+  },
+  "2020": {
+   "allotted": 324953.2,
+   "gross_official": 432647.1,
+   "share": 0.7511,
+   "complete_year": true
+  },
+  "2021": {
+   "allotted": 401137.4,
+   "gross_official": 511972.0,
+   "share": 0.7835,
+   "complete_year": true
+  },
+  "2022": {
+   "allotted": 359954.5,
+   "gross_official": 508317.5,
+   "share": 0.7081,
+   "complete_year": true
+  },
+  "2023": {
+   "allotted": 417685.8,
+   "gross_official": 501478.0,
+   "share": 0.8329,
+   "complete_year": true
+  },
+  "2024": {
+   "allotted": 364579.5,
+   "gross_official": 423655.9,
+   "share": 0.8606,
+   "complete_year": true
+  },
+  "2025": {
+   "allotted": 334516.7,
+   "gross_official": 428799.4,
+   "share": 0.7801,
+   "complete_year": true
+  },
+  "2026": {
+   "allotted": 326926.7,
+   "gross_official": 298460.1,
+   "share": 1.0954,
+   "complete_year": false
+  }
+ }
+}

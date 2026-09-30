@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zinslast-Jahrgänge</title>
+<meta name="description" content="Welche Zinslast wurde in einem Jahr für die Zukunft eingegangen? Finanzierungskosten staatlicher Kreditjahrgänge bis zur Fälligkeit, berechnet aus einzelnen Emissionen.">
+<link rel="stylesheet" href="style.css">
+<script>
+  try { var t = localStorage.getItem("theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#/">Zinslast-Jahrgänge <span>· Schuldenkosten politisch zurechnen</span></a>
+    <nav class="main" aria-label="Hauptnavigation">
+      <a href="#/" data-nav="jahr">Jahresansicht</a>
+      <a href="#/regierungen" data-nav="regierungen">Regierungen</a>
+      <a href="#/quellen" data-nav="quellen">Quellen</a>
+      <a href="#/methode" data-nav="methode">Methode</a>
+      <a href="#/pruefung" data-nav="pruefung">Prüfung</a>
+    </nav>
+    <button class="theme-toggle" type="button" id="themeToggle" aria-label="Farbschema wechseln">Hell/Dunkel</button>
+  </div>
+</header>
+<main class="wrap" id="app" tabindex="-1">
+  <p class="loading">Daten werden geladen …</p>
+</main>
+<footer class="site">
+  <div class="wrap">
+    Alle Zahlen mit Status: <em>aus einzelnen Emissionen berechnet</em>, <em>modelliert</em>, <em>Projektion</em>,
+    <em>amtliche Statistik</em>, <em>internationale Datenbank</em> oder <em>keine ausreichenden Daten</em>.
+    Quellen und Rechenweg: <a href="#/quellen">Quellen</a> · <a href="#/methode">Methode</a> · <a href="#/pruefung">Prüfung</a>.
+    Keine Anlage- oder Finanzberatung.
+  </div>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

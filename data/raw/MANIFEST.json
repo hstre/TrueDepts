@@ -1,0 +1,65 @@
+{
+  "de_emissionshistorie": {
+    "file": "de/emissionshistorie_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/auktionen/emissionshistorie_dt.xlsx",
+    "retrieved": "2026-09-30T18:06:29+00:00",
+    "bytes": 342526,
+    "sha256": "11a34d42953c043f44c1371bfc15528f4f9a90e636a9b429556d76e032097b40"
+  },
+  "de_einzelaufstellung_jahre": {
+    "file": "de/einzelaufstellung_jahre_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/berichtswesen/einzelaufstellung_jahre_dt.xlsx",
+    "retrieved": "2026-09-30T18:06:30+00:00",
+    "bytes": 210746,
+    "sha256": "9ec2c0aa4d071916d150f583cb7bb4d047d6d6ca867a677dbe0050ad7dc937a9"
+  },
+  "de_einzelaufstellung": {
+    "file": "de/einzelaufstellung_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/berichtswesen/einzelaufstellung_dt.xlsx",
+    "retrieved": "2026-09-30T18:06:30+00:00",
+    "bytes": 27029,
+    "sha256": "fc4304a65b95f00e201e0c759e19e542a1693dcc51f09813158aa7e186a89275"
+  },
+  "de_schuldenbericht": {
+    "file": "de/schuldenbericht_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/berichtswesen/schuldenbericht_dt.xlsx",
+    "retrieved": "2026-09-30T18:06:32+00:00",
+    "bytes": 1349488,
+    "sha256": "c9127325527a2db09827d08aaf2417093751cbf31c3bf7340c2fa2346256bc30"
+  },
+  "de_referenzindex_2005": {
+    "file": "de/archiv_referenzindex_bj2005_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/indexverhaeltnis/archiv_referenzindex_bj2005_dt.xlsx",
+    "retrieved": "2026-09-30T18:06:33+00:00",
+    "bytes": 274049,
+    "sha256": "83b2c0cd58c43e616dcc35d0ebf59a29d714adf552ba80544d22b1544d7dc5ed"
+  },
+  "de_referenzindex_2015": {
+    "file": "de/archiv_referenzindex_bj2015_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/indexverhaeltnis/archiv_referenzindex_bj2015_dt.xlsx",
+    "retrieved": "2026-09-30T18:06:34+00:00",
+    "bytes": 286650,
+    "sha256": "79fa4bdc161c1dfc095258d953f76f8b1e7440a8ddeadad8605372d78a9e63ce"
+  },
+  "wb_interest": {
+    "file": "intl/worldbank_GC.XPN.INTP.CN.json",
+    "url": "https://api.worldbank.org/v2/country/DEU;FRA;ITA;ESP;NLD;AUT;GBR;USA;JPN/indicator/GC.XPN.INTP.CN?format=json&per_page=2000&date=1960:2030",
+    "retrieved": "2026-09-30T18:09:11+00:00",
+    "bytes": 128441,
+    "sha256": "dc6ff441097be0196a3716ed738ee4c4bf1e1ee535d20d343228fce76df52f3b"
+  },
+  "imf_debt": {
+    "file": "intl/imf_GGXWDG_NGDP.json",
+    "url": "https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP/DEU/FRA/ITA/ESP/NLD/AUT/GBR/USA/JPN",
+    "retrieved": "2026-09-30T18:09:48+00:00",
+    "bytes": 98046,
+    "sha256": "ee29ce0c80bcfda6875be68930b6b6d31c9b67d1834aa5c4e9aebec13a3cefd3"
+  },
+  "de_referenzindex_2025": {
+    "file": "de/archiv_referenzindex_bj2025_dt.xlsx",
+    "url": "https://www.deutsche-finanzagentur.de/fileadmin/user_upload/Institutionelle-investoren/indexverhaeltnis/archiv_referenzindex_bj2025_dt.xlsx",
+    "retrieved": "2026-09-30T18:10:31+00:00",
+    "bytes": 50657,
+    "sha256": "e729e0d9e0b7c801de693788d17dbc904fdf00f93eb38466c961be2137bdbab3"
+  }
+}

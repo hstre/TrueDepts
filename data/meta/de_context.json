@@ -1,0 +1,15 @@
+{
+  "country": "DE",
+  "name": "Deutschland",
+  "scope": "Bund: Bundeshaushalt und über Bundeswertpapiere finanzierte Sondervermögen (u. a. Finanzmarktstabilisierungsfonds, Wirtschaftsstabilisierungsfonds, Investitions- und Tilgungsfonds, Sondervermögen Bundeswehr, Sondervermögen Infrastruktur und Klimaneutralität). Nicht enthalten: Länder, Gemeinden, Sozialversicherungen. Der Schuldenstand des Gesamtstaats (Maastricht, IWF) ist deshalb deutlich höher.",
+  "periods": [
+    {"from": 1945, "to": 1948, "territory": "Besatzungszonen; kein deutscher Bundesstaat", "currency": "Reichsmark (bis 20.06.1948), D-Mark in den Westzonen ab 21.06.1948", "state": "Es gab keinen Bund als Schuldner. Reichsschulden sind nicht Gegenstand dieser Seite."},
+    {"from": 1949, "to": 1956, "territory": "Bundesrepublik Deutschland (früheres Bundesgebiet ohne Saarland; Sonderstatus West-Berlin)", "currency": "D-Mark", "state": "Bund ab 15.09.1949 (erste Bundesregierung)."},
+    {"from": 1957, "to": 1989, "territory": "Früheres Bundesgebiet einschließlich Saarland (ab 01.01.1957)", "currency": "D-Mark", "state": "Bund"},
+    {"from": 1990, "to": 1990, "territory": "Bis 02.10.1990 früheres Bundesgebiet, ab 03.10.1990 vereinigtes Deutschland", "currency": "D-Mark (in der DDR ab 01.07.1990)", "state": "Mit der Einheit gingen Schulden der DDR auf Sondervermögen des Bundes über (u. a. Kreditabwicklungsfonds, später Erblastentilgungsfonds)."},
+    {"from": 1991, "to": 1998, "territory": "Vereinigtes Deutschland", "currency": "D-Mark", "state": "Bund und Sondervermögen (Erblastentilgungsfonds, Fonds Deutsche Einheit, Bundeseisenbahnvermögen u. a.)"},
+    {"from": 1999, "to": 2001, "territory": "Vereinigtes Deutschland", "currency": "Euro (Buchgeld; umlaufende DM-Anleihen wurden auf Euro umgestellt, 1 € = 1,95583 DM)", "state": "Bund; frühere Sondervermögen werden schrittweise in die Bundesschuld übernommen (siehe Schuldenbericht)."},
+    {"from": 2002, "to": 2024, "territory": "Vereinigtes Deutschland", "currency": "Euro", "state": "Bund einschließlich über Bundeswertpapiere finanzierter Sondervermögen"},
+    {"from": 2025, "to": 2100, "territory": "Vereinigtes Deutschland", "currency": "Euro", "state": "Bund; das Sondervermögen Infrastruktur und Klimaneutralität wurde im Oktober 2025 rückwirkend zum 01.01.2025 errichtet. Ab 2025 weist der Schuldenbericht zusätzlich eine periodengerechte Verteilung von Agio/Disagio aus."}
+  ]
+}
