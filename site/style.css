@@ -14,6 +14,8 @@
   --series-2: #eb6834;
   --paid: #0b0b0b;
   --gap-hatch: #c9c7c0;
+  --event-band: rgba(120, 110, 200, 0.13);
+  --event-text: #5b52a8;
   --link: #1c5cab;
   --focus: #2a78d6;
   --chip-calc: #e3eefb;
@@ -40,6 +42,10 @@
     --series-2: #d95926;
     --paid: #ffffff;
     --gap-hatch: #4a4a46;
+  --event-band: rgba(160, 150, 240, 0.16);
+  --event-text: #b3abf2;
+    --event-band: rgba(160, 150, 240, 0.16);
+    --event-text: #b3abf2;
     --link: #86b6ef;
     --focus: #86b6ef;
     --chip-calc: #1c3350;
@@ -148,6 +154,7 @@ select, .btn {
 .chip.intl { background: var(--chip-intl); }
 .chip.none { background: var(--chip-none); color: var(--text-2); }
 .chip.mixed { background: var(--chip-calc); }
+.chip.derived, .chip.derived_mixed { background: var(--chip-calc); border-style: dotted; }
 
 .chart-card h2 { font-size: 1.15rem; }
 .chart-sub { color: var(--text-2); font-size: .92rem; margin-bottom: .5rem; }
@@ -234,3 +241,7 @@ a.btn { display: inline-block; text-decoration: none; }
 .doc .card > h2 { border-top: none; margin-top: 0; padding-top: 0; }
 .note { overflow-wrap: anywhere; }
 .pilot { background: var(--surface-2); border: 1px solid var(--border); border-left: 4px solid var(--series-1); border-radius: 6px; padding: .6rem .85rem; margin: .25rem 0 1rem; font-size: .92rem; line-height: 1.5; overflow-wrap: anywhere; }
+.events { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .2rem .9rem; font-size: .85rem; color: var(--text-2); }
+.events .num { display: inline-block; min-width: 1.3rem; height: 1.3rem; line-height: 1.3rem; text-align: center; border-radius: 50%; background: var(--event-band); color: var(--event-text); font-weight: 600; font-size: .75rem; margin-right: .35rem; }
+.timeline h3 { margin: .75rem 0 .1rem; font-size: 1rem; }
+.timeline .controls { margin-bottom: .25rem; }

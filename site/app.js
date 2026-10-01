@@ -97,6 +97,7 @@
   const pctNum = (v, f) => (f || nf2).format(v) + (EN() ? "%" : " %");
   function dateDe(iso) {
     if (!iso) return "–";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return String(iso).replace("Monate", L("Monate", "months"));
     const [y, m, d] = iso.split("-");
     if (EN()) return dtf.format(new Date(Date.UTC(+y, +m - 1, +d)));
     return d + "." + m + "." + y;
@@ -131,12 +132,17 @@
   const STATUS_DEF = {
     calc: { ico: "●", de: "aus einzelnen Emissionen berechnet", en: "calculated from individual issues" },
     mixed: { ico: "●", de: "berechnet, teils Projektion", en: "calculated, partly projection" },
+    derived: { ico: "◐", de: "berechnet mit abgeleiteten Stammdaten", en: "calculated with derived reference data" },
+    derived_mixed: { ico: "◐", de: "berechnet mit abgeleiteten Stammdaten, teils Projektion", en: "calculated with derived reference data, partly projection" },
     model: { ico: "◆", de: "modelliert", en: "modelled" },
     proj: { ico: "◌", de: "Projektion", en: "projection" },
     official: { ico: "▲", de: "amtliche Statistik", en: "official statistics" },
     intl: { ico: "○", de: "internationale Datenbank", en: "international database" },
     none: { ico: "–", de: "keine ausreichenden Daten", en: "insufficient data" },
   };
+  /** Grundstatus berechneter Werte je Land: Für das Vereinigte Königreich sind Fälligkeit und Kuponkalender abgeleitet. */
+  const calcSt = code => (code === "GB" ? "derived" : "calc");
+  const mixSt = code => (code === "GB" ? "derived_mixed" : "mixed");
   const statusLabel = k => { const st = STATUS_DEF[k] || STATUS_DEF.none; return L(st.de, st.en); };
   function chip(status, text) {
     const st = STATUS_DEF[status] || STATUS_DEF.none;
@@ -210,6 +216,7 @@
         if (opts.whisker && opts.whisker.hi[i] !== null) { hi = Math.max(hi, opts.whisker.hi[i]); lo = Math.min(lo, opts.whisker.lo[i]); }
         if (opts.dots && opts.dots.values[i] !== null && opts.dots.values[i] !== undefined) { hi = Math.max(hi, opts.dots.values[i]); lo = Math.min(lo, opts.dots.values[i]); }
       }
+      if (opts.yRange) { lo = Math.min(lo, opts.yRange[0]); hi = Math.max(hi, opts.yRange[1]); }
       const ticks = niceTicks(lo, hi, W < 500 ? 4 : 5);
       const y0 = ticks[0], y1 = ticks[ticks.length - 1];
       const Y = v => m.t + ih - (v - y0) / (y1 - y0) * ih;
@@ -221,6 +228,9 @@
         s("pattern", { id: "hatch-proj", patternUnits: "userSpaceOnUse", width: 5, height: 5, patternTransform: "rotate(45)" },
           s("rect", { width: 5, height: 5, fill: "var(--series-2)", "fill-opacity": 0.35 }),
           s("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--series-2)", "stroke-width": 2.5 })),
+        s("pattern", { id: "hatch-proj1", patternUnits: "userSpaceOnUse", width: 5, height: 5, patternTransform: "rotate(45)" },
+          s("rect", { width: 5, height: 5, fill: "var(--series-1)", "fill-opacity": 0.3 }),
+          s("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--series-1)", "stroke-width": 2.5 })),
         s("pattern", { id: "hatch-model", patternUnits: "userSpaceOnUse", width: 5, height: 5, patternTransform: "rotate(135)" },
           s("rect", { width: 5, height: 5, fill: "var(--series-1)", "fill-opacity": 0.18 }),
           s("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: "var(--series-1)", "stroke-width": 1.6 })),
@@ -240,6 +250,14 @@
           } else i++;
         }
       }
+      if (opts.events) {
+        for (const ev of opts.events) {
+          if (ev.i1 < 0 || ev.i0 >= n) continue;
+          const i0 = Math.max(0, ev.i0), i1 = Math.min(n - 1, ev.i1);
+          svg.append(s("rect", { x: m.l + band * i0, y: m.t, width: band * (i1 - i0 + 1), height: ih, fill: "var(--event-band)" }));
+          svg.append(s("text", { x: m.l + band * (i0 + i1 + 1) / 2, y: m.t + 11, "text-anchor": "middle", fill: "var(--event-text)", "font-weight": 600 }, String(ev.num)));
+        }
+      }
       const g = s("g", { class: "grid" });
       for (const t of ticks) {
         g.append(s("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t) }));
@@ -256,8 +274,8 @@
           const hgt = Math.max(0.5, yB - yA - (opts.stacks.length > 1 ? 1 : 0));
           svg.append(s("rect", {
             x: X(i), y: yA, width: bw, height: hgt, rx: bw > 8 ? 2 : 0,
-            fill: st.pattern === "model" ? "url(#hatch-model)" : st.pattern ? "url(#hatch-proj)" : st.color,
-            stroke: st.pattern === "model" ? "var(--series-1)" : st.pattern ? "var(--series-2)" : null, "stroke-width": st.pattern ? 1 : null,
+            fill: st.pattern === "model" ? "url(#hatch-model)" : st.pattern === "proj1" ? "url(#hatch-proj1)" : st.pattern ? "url(#hatch-proj)" : st.color,
+            stroke: st.pattern === "model" || st.pattern === "proj1" ? "var(--series-1)" : st.pattern ? "var(--series-2)" : null, "stroke-width": st.pattern ? 1 : null,
           }));
         }
         if (opts.whisker && opts.whisker.hi[i] !== null && opts.whisker.hi[i] !== opts.whisker.lo[i]) {
@@ -370,7 +388,7 @@
       else if (parts[0] === "methode") { setNav("methode"); await viewMethod(); }
       else if (parts[0] === "pruefung") { setNav("pruefung"); await viewVerification(); }
       else if (parts[0] === "regierungen") { setNav("regierungen"); await viewGovernments((parts[1] || "").toUpperCase()); }
-      else if (parts[0] === "vergleich") { setNav("vergleich"); await viewCompare(parseInt(parts[1], 10)); }
+      else if (parts[0] === "vergleich") { setNav("vergleich"); await viewCompare(parseInt(parts[1], 10), parts[2], parts[3], parts[4]); }
       else {
         setNav("jahr");
         const countries = await load("data/countries.json");
@@ -460,14 +478,17 @@
         h("em", null, L("gesamte Laufzeit", "entire term")),
         L(" auslösen – verteilt auf viele künftige Jahre, nur für die erfassten Emissionen.", " – spread over many future years, covered issues only."),
         h("br"), L("Punkt: Zinsen, die in ", "Dot: interest paid in "), h("em", null, L("genau diesem einen Jahr", "that single year")), L(" auf ", " on "), h("em", null, L("alle", "all")),
-        L(" alten und neuen Schulden gezahlt wurden.", " old and new debt.")),
+        country.code === "US" ? L(" alten und neuen Schulden angefallen sind (ab 2011 periodengerechter Zinsaufwand).", " old and new debt (from 2011 accrual-based interest expense).")
+          : L(" alten und neuen Schulden gezahlt wurden.", " old and new debt.")),
       h("p", { class: "chart-sub" }, meta.scopeShort + ". ",
         country.code === "DE" ? L("Beträge vor 1999 von D-Mark in Euro umgerechnet (1,95583), nicht inflationsbereinigt. ", "Amounts before 1999 converted from Deutsche Mark to euro (1.95583), not adjusted for inflation. ")
           : L("Nominal, nicht inflationsbereinigt. ", "Nominal, not adjusted for inflation. "), L("Jahr anklicken zum Wechseln.", "Click a year to switch.")),
       h("div", { class: "legend" },
-        h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L(`Säule: Zinslast über die gesamte Laufzeit – erfasste Emissionen, berechnet (ab ${meta.dataFrom})`, `Bar: interest burden over the full term – covered issues, calculated (from ${meta.dataFrom})`)),
+        h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), country.code === "GB" ? L(`Säule: Zinslast über die gesamte Laufzeit – erfasste Emissionen, berechnet mit abgeleiteten Stammdaten (ab ${meta.dataFrom})`, `Bar: interest burden over the full term – covered issues, calculated with derived reference data (from ${meta.dataFrom})`)
+          : L(`Säule: Zinslast über die gesamte Laufzeit – erfasste Emissionen, berechnet (ab ${meta.dataFrom})`, `Bar: interest burden over the full term – covered issues, calculated (from ${meta.dataFrom})`)),
         country.code === "DE" ? h("span", null, h("span", { class: "key", style: "background-image:repeating-linear-gradient(135deg,var(--series-1) 0 2px,transparent 2px 5px);border:1px solid var(--series-1)" }), L("Säule: dasselbe, modelliert aus Bundesbank-Aggregaten, Linie = Spanne (1960–1998)", "Bar: the same, modelled from Bundesbank aggregates, line = range (1960–1998)")) : null,
-        h("span", null, h("span", { class: "key dot", style: "background:var(--paid)" }), L(`Punkt: in einem einzelnen Jahr gezahlte Zinsen auf alle Schulden (${meta.paidLegend})`, `Dot: interest paid in a single year on all debt (${meta.paidLegend})`)),
+        h("span", null, h("span", { class: "key dot", style: "background:var(--paid)" }), country.code === "US" ? L(`Punkt: Zinsen eines einzelnen Jahres auf alle Schulden (${meta.paidLegend})`, `Dot: interest of a single year on all debt (${meta.paidLegend})`)
+          : L(`Punkt: in einem einzelnen Jahr gezahlte Zinsen auf alle Schulden (${meta.paidLegend})`, `Dot: interest paid in a single year on all debt (${meta.paidLegend})`)),
         h("span", null, h("span", { class: "key hatch" }), L("keine Einzelemissionsdaten", "no individual issue data"))),
       box);
     queueMicrotask(() => cleanups.push(barChart(box, {
@@ -482,7 +503,7 @@
         rows.push(y.totals ? { color: "var(--series-1)", value: money(y.totals.cost), label: L("Zinslast der erfassten Emissionen, gesamte Laufzeit", "interest burden of covered issues, full term") + (y.totals.partial ? L(" (Jahr läuft)", " (year in progress)") : "") }
           : md ? { color: "var(--series-1)", value: `${money(md.low)} – ${money(md.high)}`, label: L("Zinslast, gesamte Laufzeit – modelliert (Größenordnung)", "interest burden, full term – modelled (order of magnitude)") }
           : { value: L("keine ausreichenden Daten", "insufficient data"), label: L("Jahrgangskosten", "vintage cost") });
-        if (paid[i] !== null) rows.push({ color: "var(--paid)", value: money(paid[i]), label: y.paid && y.paid.cash !== undefined ? L("in diesem Jahr gezahlt, alle Schulden (amtlich)", "paid in this year, all debt (official)") : L("in diesem Jahr gezahlt, alle Schulden (Weltbank)", "paid in this year, all debt (World Bank)") });
+        if (paid[i] !== null) rows.push({ color: "var(--paid)", value: money(paid[i]), label: y.paid && y.paid.cash !== undefined ? (country.code === "US" ? L("Zinsaufwand dieses Jahres, alle Schulden (amtlich, periodengerecht)", "interest expense of this year, all debt (official, accrual basis)") : L("in diesem Jahr gezahlt, alle Schulden (amtlich)", "paid in this year, all debt (official)")) : L("in diesem Jahr gezahlt, alle Schulden (Weltbank)", "paid in this year, all debt (World Bank)") });
         return { head: String(y.year), rows, note: md ? L("Modell: Brutto-Absatz × Emissionsrendite × angenommene Laufzeit", "Model: gross sales × issue yield × assumed term") : null };
       },
       onClick: i => { location.hash = `#/${country.code}/${cats[i]}`; },
@@ -533,7 +554,8 @@
         h("div", { class: "value" }, money(t.allotted)),
         [h("div", { class: "sub" }, L("Emissionserlös ", "Issue proceeds "), h("strong", null, money(t.proceeds)), L(` aus ${v.issues.filter(i => i.cost !== undefined).length} Emissionen`, ` from ${v.issues.filter(i => i.cost !== undefined).length} issues`)),
           t.retained ? h("div", { class: "sub" }, L("Zusätzlich ", "In addition "), h("strong", null, money(t.retained)), L(" in den Eigenbestand genommen (nicht verkauft; ", " taken into own holdings (not sold; "), chip("none", L("Verkaufserlös unbekannt", "sale proceeds unknown")), ")") : null,
-          partial ? h("div", { class: "sub" }, L(`Laufendes Jahr: Emissionen bis ${dateDe(v.data_through)}.`, `Current year: issues up to ${dateDe(v.data_through)}.`)) : null]));
+          partial ? h("div", { class: "sub" }, L(`Laufendes Jahr: Emissionen bis ${dateDe(v.data_through)}.`, `Current year: issues up to ${dateDe(v.data_through)}.`)) : null,
+          t.incomplete_start ? h("div", { class: "sub" }, chip("none", L("angebrochenes Startjahr", "incomplete first year")), " ", L(`Die Daten beginnen erst am ${dateDe(t.incomplete_start)}; die Werte dieses Jahres beruhen auf wenigen Emissionen und sind nicht repräsentativ.`, `The data only begin on ${dateDe(t.incomplete_start)}; this year's figures rest on a few issues and are not representative.`)) : null]));
     } else if (v.aggregate && v.aggregate.gross) {
       const ag = v.aggregate;
       tiles.push(tile(T(1, "Neu aufgenommen", "New borrowing", [" – Anleihen des Bundes, Brutto-Absatz (Nennwert)", " – federal bonds, gross sales (nominal)"]), chip("official", L("amtlich: Bundesbank", "official: Bundesbank")),
@@ -559,6 +581,9 @@
           sp.source === "auctions" ? h("div", { class: "sub" }, L("Brutto = alle Auktionen des Jahres (kurzlaufende Bills werden mehrfach im Jahr erneuert); Tilgungen = Fälligkeiten erfasster Emissionen", "Gross = all auctions of the year (short-term bills are rolled over several times a year); redemptions = maturities of covered issues"),
             sp.scope && sp.scope.includes("unvollständig") ? L(" – unvollständig, da vor 1979 begebene Papiere fehlen.", " – incomplete, as securities issued before 1979 are missing.") : ".") : null,
           sp.cost_net !== undefined ? h("div", { class: "sub" }, L("Zinslast rechnerisch auf zusätzliche Verschuldung: ", "Interest burden attributable to additional borrowing: "), h("strong", null, money(sp.cost_net)), L(` (${nf0.format(sp.share_net * 100)} % proportional)`, ` (${nf0.format(sp.share_net * 100)}% proportional)`)) : null,
+          sp.allocation_suspended ? h("div", { class: "sub" }, chip("none", L("Aufteilung ausgesetzt", "split suspended")), " ",
+            L(`Die amtlichen Summen reichen bis ${dateDe(sp.allocation_suspended.as_of)}, die erfassten Emissionen bis ${dateDe(sp.allocation_suspended.issues_through)}. Ein Anteil aus dem einen Zeitraum wird nicht auf den anderen übertragen; die Zinslast wird deshalb bis zum nächsten Datenstand nicht aufgeteilt.`,
+              `The official totals run up to ${dateDe(sp.allocation_suspended.as_of)}, the covered issues up to ${dateDe(sp.allocation_suspended.issues_through)}. A share from one period is not applied to the other; the interest burden is therefore not split until the next data update.`)) : null,
           sp.cost_net_model ? h("div", { class: "sub" }, L("Zinslast rechnerisch auf zusätzliche Verschuldung (modelliert): ", "Interest burden attributable to additional borrowing (modelled): "), h("strong", null, `${money(sp.cost_net_model[0])} – ${money(sp.cost_net_model[2])}`)) : null,
           sp.source === "bundesbank" ? h("div", { class: "sub" }, L("Nur Anleihen des Bundes; netto = Veränderung des Umlaufs laut Bundesbank, Tilgung = Brutto − netto. Umstellungen der Statistik (z. B. 1957, 1990) können Sprünge verursachen.",
             "Federal bonds only; net = change in amount outstanding according to the Bundesbank, redemption = gross − net. Statistical changes (e.g. 1957, 1990) can cause jumps.")) : null,
@@ -571,7 +596,7 @@
     // 3. Kosten bis Fälligkeit
     if (t) {
       const band = t.cost_low !== t.cost_high;
-      tiles.push(tile(T(3, "Finanzierungskosten der erfassten Emissionen", "Financing cost of covered issues", [" – bis Fälligkeit", " – until maturity"]), chip(band ? "mixed" : "calc"),
+      tiles.push(tile(T(3, "Finanzierungskosten der erfassten Emissionen", "Financing cost of covered issues", [" – bis Fälligkeit", " – until maturity"]), chip(band ? mixSt(country.code) : calcSt(country.code)),
         h("div", { class: "value" }, money(t.cost)),
         [coverageLine(v), band ? h("div", { class: "sub" }, L("davon fest ", "of which fixed "), h("strong", null, money(t.cost_fixed)), L("; gesamt ", "; total "), h("strong", null, money(t.cost_low) + L(" bis ", " to ") + money(t.cost_high)), " ",
           chip("proj", v.country === "US" ? L("Projektion Inflation/Geldmarktzins", "projection inflation/money-market rate") : L("Projektion 0–4 % Inflation", "projection 0–4% inflation"))) : null,
@@ -595,7 +620,9 @@
     }
     // 5. Tatsächlich gezahlt
     const p = v.paid;
-    const t5 = ["Im Jahr tatsächlich gezahlte Zinsen", "Interest actually paid in the year"];
+    const accrual = country.code === "US" && p.status === "official";
+    const t5 = accrual ? ["Zinsaufwand des Jahres (periodengerecht, nicht Kassenzahlung)", "Interest expense of the year (accrual basis, not cash paid)"]
+      : ["Im Jahr tatsächlich gezahlte Zinsen", "Interest actually paid in the year"];
     if (p.status === "official") {
       tiles.push(tile(T(5, t5[0], t5[1], [" – auf alte und neue Schulden (Vergleichszahl)", " – on old and new debt (comparison figure)"]), chip("official"),
         h("div", { class: "value" }, money(p.cash)),
@@ -630,9 +657,10 @@
       return tile(head(L(" – Kosten je 100 Einheiten Emissionserlös", " – cost per 100 units of issue proceeds")), chip("none"),
         h("div", { class: "value nodata" }, L("Keine ausreichenden Daten", "Insufficient data")), [h("div", { class: "sub" }, L("Nur mit Einzelemissionen berechenbar.", "Can only be calculated from individual issues."))]);
     }
-    return tile(head(L(" – je 100 Einheiten Emissionserlös", " – per 100 units of issue proceeds")), chip(t.cost_low !== t.cost_high ? "mixed" : "calc"),
+    return tile(head(L(" – je 100 Einheiten Emissionserlös", " – per 100 units of issue proceeds")), chip(t.cost_low !== t.cost_high ? mixSt(v.country) : calcSt(v.country)),
       h("div", { class: "value" }, nf2.format(t.cost_per_100), h("span", { class: "sub", style: "font-size:.85rem;font-weight:400" }, L(" über die gesamte Laufzeit", " over the full term"))),
-      [h("div", { class: "sub" }, L("Ø Laufzeit ", "Avg. term "), h("strong", null, nf1.format(t.avg_term) + L(" Jahre", " years")), L(" → je Laufzeitjahr ", " → per year of term "), h("strong", null, nf2.format(t.cost_per_100_year))),
+      [t.incomplete_start ? h("div", { class: "sub" }, chip("none", L("nicht repräsentativ", "not representative")), L(` angebrochenes Startjahr (Daten ab ${dateDe(t.incomplete_start)}).`, ` incomplete first year (data from ${dateDe(t.incomplete_start)}).`)) : null,
+        h("div", { class: "sub" }, L("Ø Laufzeit ", "Avg. term "), h("strong", null, nf1.format(t.avg_term) + L(" Jahre", " years")), L(" → je Laufzeitjahr ", " → per year of term "), h("strong", null, nf2.format(t.cost_per_100_year))),
         h("div", { class: "sub" }, L("Ø Emissionsrendite ", "Avg. issue yield "), h("strong", null, pct(t.avg_yield))),
         h("div", { class: "sub" }, L("Lange Kredite können insgesamt mehr Zinsen kosten und trotzdem günstigere jährliche Konditionen haben – deshalb Laufzeit und Jahreswert immer mitlesen.",
           "Long-term borrowing can cost more interest in total and still have cheaper annual terms – so always read the term and the annual value alongside."))]);
@@ -697,7 +725,7 @@
         : v.scope_note ? L(" Erfasst sind alle marktfähigen Wertpapiere aus Auktionen, nicht die gesamte Staatsverschuldung.", " Covers all marketable securities from auctions, not total government debt.")
         : L(" Das ist eine Teilsumme der Kreditaufnahme dieses Jahres.", " This is a partial total of this year's borrowing.")));
     card.append(h("div", { class: "legend" },
-      h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L("feststehend (Kupons, Disagio/Agio, erhaltene Stückzinsen) ", "fixed (coupons, discount/premium, accrued interest received) "), chip("calc")),
+      h("span", null, h("span", { class: "key", style: "background:var(--series-1)" }), L("feststehend (Kupons, Disagio/Agio, erhaltene Stückzinsen) ", "fixed (coupons, discount/premium, accrued interest received) "), chip(calcSt(v.country))),
       hasProj ? h("span", null, h("span", { class: "key proj" }), v.country === "US"
         ? L("abhängig von Inflation (TIPS) bzw. Geldmarktzins (FRN) – mittleres Szenario; Linie = Spanne der Szenarien ", "depends on inflation (TIPS) or money-market rate (FRN) – mid scenario; line = range of scenarios ")
         : v.country === "GB" ? L("abhängig vom RPI (Index-linked Gilts) – mittleres Szenario 2 %; Linie = Spanne 0 % bis 4 % ", "depends on RPI (index-linked gilts) – mid scenario 2%; line = range 0% to 4% ")
@@ -789,7 +817,7 @@
       more.hidden = list.length <= LIMIT;
       for (const i of (showAll ? list : list.slice(0, LIMIT))) {
         const name = `${i.instrument}${i.coupon ? " " + pctNum(i.coupon * 100) : ""} ${dateDe(i.maturity)}`;
-        const st = i.status === "proj" ? chip("proj", L("berechnet + Projektion", "calculated + projection")) : chip(i.status, i.status === "calc" ? L("berechnet", "calculated") : null);
+        const st = i.status === "proj" ? chip("proj", v.country === "GB" ? L("berechnet (Stammdaten abgeleitet) + Projektion", "calculated (reference data derived) + projection") : L("berechnet + Projektion", "calculated + projection")) : chip(i.status, i.status === "calc" ? L("berechnet", "calculated") : i.status === "derived" ? L("berechnet, Stammdaten abgeleitet", "calculated, reference data derived") : null);
         const tr_ = h("tr", { class: "issue", tabindex: 0, "aria-expanded": "false" },
           h("td", { class: "num" }, dateDe(i.date)),
           h("td", null, name, h("div", { class: "muted" }, i.isin + " · " + methodLabel(sources, i.method))),
@@ -880,7 +908,7 @@
         if (v.issues.some(i => i.soma)) items.push(L(`Enthalten sind Zuteilungen an die Federal Reserve (SOMA) von ${money(v.issues.reduce((a, i) => a + (i.soma || 0), 0))}: Die Notenbank ersetzt fällige Bestände; auch das ist Anschlussfinanzierung.`,
           `Includes allotments to the Federal Reserve (SOMA) of ${money(v.issues.reduce((a, i) => a + (i.soma || 0), 0))}: the central bank replaces maturing holdings; this is refinancing too.`));
         if (v.issues.some(i => i.status === "model")) items.push(L("TIPS: Index-Verhältniszahlen vor Mai 2008 durch Interpolation zwischen amtlichen Referenz-CPI-Werten der Emissionstage (modelliert).", "TIPS: index ratios before May 2008 by interpolation between official reference CPI values on issue dates (modelled)."));
-        if (v.issues.some(i => i.kind === "frn")) items.push(L("FRN: Kupon aus der Rendite der 13-Wochen-Bill (aus denselben Auktionsdaten) plus festem Aufschlag; künftiger Index als Projektion (letzter Wert ±2 %-Punkte).", "FRN: coupon from the 13-week bill yield (from the same auction data) plus a fixed spread; future index as projection (last value ±2 percentage points)."));
+        if (v.issues.some(i => i.kind === "frn")) items.push(L("FRN: täglicher Zins = High Rate der jeweils letzten 13-Wochen-Bill (aus denselben Auktionsdaten, gültig ab dem Folgetag der Auktion) plus festem Aufschlag, Mindestzins null; ab zwei Geschäftstagen vor jedem Zinstermin gilt der dann aktuelle Satz bis zur Zahlung (Sperrfrist). Künftiger Index als Projektion (letzter Wert ±2 %-Punkte). Geschäftstage nach US-Bundesfeiertagen einschließlich Karfreitag (Näherung).", "FRN: daily interest = high rate of the latest 13-week bill (from the same auction data, effective from the day after the auction) plus a fixed spread, minimum rate zero; from two business days before each interest payment date the rate then in effect applies until payment (lockout). Future index as projection (last value ±2 percentage points). Business days based on US federal holidays including Good Friday (approximation)."));
         if (v.split && v.split.scope && v.split.scope.includes("unvollständig")) items.push(L("Tilgungen vor 2010 unvollständig: Fälligkeiten von vor 1979 begebenen Papieren fehlen in den Auktionsdaten.", "Redemptions before 2010 incomplete: maturities of securities issued before 1979 are missing from the auction data."));
       }
     } else if (v.aggregate && v.aggregate.model) {
@@ -962,16 +990,125 @@
   }
 
   // ------------------------------------------------------------------ Vergleich
-  async function viewCompare(yearArg) {
+  // Große Krisen und Umbrüche als Orientierung im Zeitverlauf (redaktionell, Jahre gerundet)
+  const EVENTS = [
+    { from: 1973, to: 1975, de: "Erste Ölkrise", en: "First oil crisis" },
+    { from: 1979, to: 1982, de: "Zweite Ölkrise und Hochzinsphase", en: "Second oil crisis and high-interest period" },
+    { from: 1997, to: 1998, de: "Asien- und Russlandkrise", en: "Asian and Russian crisis" },
+    { from: 2000, to: 2002, de: "Platzen der Dotcom-Blase", en: "Dot-com bubble bursts" },
+    { from: 2007, to: 2009, de: "Finanz- und Bankenkrise", en: "Global financial crisis" },
+    { from: 2010, to: 2012, de: "Euro-Schuldenkrise", en: "Euro debt crisis" },
+    { from: 2020, to: 2021, de: "Corona-Pandemie", en: "COVID-19 pandemic" },
+    { from: 2022, to: 2023, de: "Energiepreis- und Inflationsschock", en: "Energy price and inflation shock" },
+  ];
+
+  const TL_METRICS = [
+    { key: "netint", de: "Nettozinsen Gesamtstaat, % des BIP (IWF)", en: "Net interest, general government, % of GDP (IMF)", pct: true, shared: true },
+    { key: "debt", de: "Schulden Gesamtstaat, % des BIP (IWF)", en: "Debt, general government, % of GDP (IMF)", pct: true, shared: true },
+    { key: "cost100", de: "Jahrgangskosten je 100 Erlös, gesamte Laufzeit", en: "Vintage cost per 100 of proceeds, full term", vintage: true, shared: true },
+    { key: "cost100y", de: "Jahrgangskosten je 100 Erlös und Laufzeitjahr", en: "Vintage cost per 100 of proceeds and year of term", vintage: true, shared: true },
+    { key: "yield", de: "Ø Emissionsrendite der erfassten Emissionen", en: "Avg. issue yield of covered issues", vintage: true, pct: true, shared: true },
+    { key: "wb", de: "Gezahlte Zinsen Zentralstaat (Weltbank, Landeswährung)", en: "Interest paid, central government (World Bank, local currency)", shared: false },
+  ];
+
+  async function timelineSection(countries, intl, a, b, metricKey) {
+    const metric = TL_METRICS.find(m => m.key === metricKey) || TL_METRICS[0];
+    const byCode = Object.fromEntries(countries.countries.map(c => [c.code, c]));
+    const ca = byCode[a] || byCode.DE, cb = byCode[b] || byCode.US;
+    const go = (na, nb, nm) => { location.hash = `#/vergleich/${state.cmpYear}/${na}/${nb}/${nm}`; };
+    const list = countries.countries.slice().sort((x, y) => countryName(x).localeCompare(countryName(y), LANG));
+    const csel = (id, cur, onch) => h("select", { id, onchange: onch }, list.map(c => h("option", { value: c.code, selected: c.code === cur.code ? true : null },
+      countryName(c) + (c.vintage_data ? "" : L(" (nur IWF/Weltbank)", " (IMF/World Bank only)")))));
+    const msel = h("select", { id: "tlMetric", onchange: e => go(ca.code, cb.code, e.target.value) },
+      TL_METRICS.map(m => h("option", { value: m.key, selected: m.key === metric.key ? true : null }, L(m.de, m.en))));
+    // Werte je Land und Jahr
+    const skippedBy = {};
+    const series = async c => {
+      const out = {};
+      const skipped = skippedBy[c.code] = {};
+      if (metric.vintage) {
+        if (!c.vintage_data) return out;
+        const sm = await load(`data/${c.code.toLowerCase()}/summary.json`);
+        for (const y of sm.years) {
+          const t = y.totals;
+          if (!t) continue;
+          const v = metric.key === "cost100" ? t.cost_per_100 : metric.key === "cost100y" ? t.cost_per_100_year : t.avg_yield;
+          if (t.incomplete_start) { skipped[y.year] = t.incomplete_start; continue; }
+          if (v !== undefined && v !== null) out[y.year] = { v, proj: t.cost_low !== t.cost_high && metric.key !== "yield", partial: t.partial };
+        }
+      } else if (metric.key === "wb") {
+        for (const [y, v] of Object.entries(intl[c.code].wb_interest)) out[+y] = { v };
+      } else {
+        for (const [y, w] of Object.entries(intl[c.code].weo)) {
+          const v = metric.key === "netint" ? w.net_interest : w.debt;
+          if (v !== undefined && v !== null) out[+y] = { v, proj: w.projection };
+        }
+      }
+      return out;
+    };
+    const [sa, sb] = await Promise.all([series(ca), series(cb)]);
+    const ys = [...Object.keys(sa), ...Object.keys(sb)].map(Number);
+    const first = ys.length ? Math.min(...ys, 1970) : 1970;
+    const last = ys.length ? Math.max(...ys) : countries.last_year;
+    const cats = []; for (let y = first; y <= last; y++) cats.push(y);
+    const vals = cats.flatMap(y => [sa[y], sb[y]]).filter(Boolean).map(x => x.v);
+    const yRange = metric.shared && vals.length ? [Math.min(0, ...vals), Math.max(...vals)] : null;
+    const events = EVENTS.map((e, k) => ({ i0: cats.indexOf(Math.max(e.from, first)), i1: cats.indexOf(Math.min(e.to, last)), num: k + 1 }))
+      .filter(e => e.i0 >= 0 && e.i1 >= 0);
+    const fmt = v => metric.pct ? pctNum(v, metric.key === "debt" ? nf0 : nf1) : metric.key === "wb" ? moneyShort(v) : nf0.format(v);
+    const fmtFull = (v, c) => metric.pct ? pctNum(v, metric.key === "debt" ? nf1 : nf2) : metric.key === "wb" ? money(v, c.currency) : nf2.format(v);
+    const block = (c, sr, color, projPattern) => {
+      const box = h("div", { class: "chart" });
+      const has = Object.keys(sr).length > 0;
+      queueMicrotask(() => cleanups.push(barChart(box, {
+        cats, height: 190, xEvery: 10, yRange, events, yFormat: fmt, focusable: false,
+        stacks: [{ color, values: cats.map(y => (sr[y] && !sr[y].proj ? sr[y].v : 0)) },
+          { pattern: projPattern, values: cats.map(y => (sr[y] && sr[y].proj ? sr[y].v : 0)) }],
+        gaps: cats.map(y => !sr[y]), gapLabel: L("keine Daten", "no data"),
+        ariaLabel: `${countryName(c)}: ${L(metric.de, metric.en)}`,
+        tooltip: i => {
+          const y = cats[i], x = sr[y];
+          const ev = EVENTS.find(e => e.from <= y && y <= e.to);
+          return { head: `${countryName(c)} ${y}`, rows: [x ? { color, value: fmtFull(x.v, c), label: L(metric.de, metric.en) + (x.proj ? (metric.vintage ? L(" (teils Projektion)", " (partly projection)") : L(" (IWF-Projektion)", " (IMF projection)")) : "") + (x.partial ? L(" (Jahr läuft)", " (year in progress)") : "") }
+            : skippedBy[c.code][y] ? { value: L("nicht gezeigt", "not shown"), label: L(`angebrochenes Startjahr: Daten erst ab ${dateDe(skippedBy[c.code][y])}, wenige nicht repräsentative Emissionen`, `incomplete first year: data only from ${dateDe(skippedBy[c.code][y])}, few unrepresentative issues`) }
+            : { value: L("keine Daten", "no data"), label: "" }], note: ev ? L(ev.de, ev.en) : null };
+        },
+        onClick: metric.vintage && c.vintage_data ? i => { location.hash = `#/${c.code}/${cats[i]}`; } : null,
+      })));
+      return [h("h3", null, countryName(c), " ", c.vintage_data || !metric.vintage ? null : chip("none", L("keine Einzelemissionsdaten", "no individual issue data"))),
+        has ? null : h("p", { class: "muted" }, L("Für dieses Land liegen zu dieser Kennzahl keine Daten vor.", "No data for this measure in this country.")), box];
+    };
+    return h("section", { class: "card timeline", "aria-labelledby": "tl-h" },
+      h("h2", { id: "tl-h" }, L("Zwei Länder im Zeitverlauf", "Two countries over time")),
+      h("div", { class: "controls" },
+        h("label", { for: "tlA" }, L("Land oben", "Upper country"), csel("tlA", ca, e => go(e.target.value, cb.code, metric.key))),
+        h("label", { for: "tlB" }, L("Land unten", "Lower country"), csel("tlB", cb, e => go(ca.code, e.target.value, metric.key))),
+        h("label", { for: "tlMetric" }, L("Kennzahl", "Measure"), msel)),
+      h("p", { class: "chart-sub" }, metric.shared
+        ? L("Beide Diagramme haben dieselbe Zeitachse und dieselbe Skala. ", "Both charts share the same time axis and scale. ")
+        : L("Gleiche Zeitachse, aber eigene Skala je Land: Beträge in Landeswährung sind nicht über Länder vergleichbar – nur der Verlauf. ", "Same time axis but separate scales: amounts in local currency are not comparable across countries – only the pattern over time. "),
+        metric.vintage ? L("Jahrgangskennzahlen gibt es nur für Länder mit Einzelemissionsdaten (Deutschland ab 1999, USA ab 1980, Vereinigtes Königreich ab 1999, dort mit abgeleiteten Stammdaten); angebrochene Startjahre mit wenigen Emissionen (USA 1979, Vereinigtes Königreich 1998) sind ausgelassen. Schraffiert: teils Projektion.", "Vintage measures exist only for countries with individual issue data (Germany from 1999, US from 1980, United Kingdom from 1999, there with derived reference data); incomplete first years with few issues (US 1979, UK 1998) are omitted. Hatched: partly projection.")
+          : metric.key === "wb" ? L("Weltbank, nominal, nicht inflationsbereinigt.", "World Bank, nominal, not adjusted for inflation.")
+          : L("IWF World Economic Outlook, Gesamtstaat; schraffiert: IWF-Projektion. Nettozinsen = Zinsausgaben minus Zinseinnahmen.", "IMF World Economic Outlook, general government; hatched: IMF projection. Net interest = interest expenditure minus interest income.")),
+      ...block(ca, sa, "var(--series-1)", "proj1"), ...block(cb, sb, "var(--series-2)", true),
+      h("ul", { class: "events" }, EVENTS.map((e, k) => h("li", null, h("span", { class: "num" }, String(k + 1)), `${e.from}–${e.to} ${L(e.de, e.en)}`))),
+      h("p", { class: "muted" }, L("Markierte Phasen: redaktionelle Einordnung großer Krisen, Jahre gerundet. Sie zeigen zeitliche Nähe, keinen nachgewiesenen Zusammenhang mit den Werten.",
+        "Marked periods: editorial selection of major crises, years rounded. They show proximity in time, not a demonstrated link with the values.")));
+  }
+
+  async function viewCompare(yearArg, a, b, metric) {
     const [countries, intl] = await Promise.all([load("data/countries.json"), load("data/intl.json")]);
     const year = Number.isFinite(yearArg) ? yearArg : countries.last_year - 1;
+    state.cmpYear = year;
+    const tl = await timelineSection(countries, intl, (a || "DE").toUpperCase(), (b || "US").toUpperCase(), metric || "netint");
     const vintage = {};
     for (const c of countries.countries.filter(c => c.vintage_data)) {
       const sm = await load(`data/${c.code.toLowerCase()}/summary.json`);
       vintage[c.code] = sm.years.find(y => y.year === year);
     }
     const years = []; for (let y = countries.last_year; y >= 1950; y--) years.push(y);
-    const sel = h("select", { id: "cmpYear", onchange: e => { location.hash = `#/vergleich/${e.target.value}`; } },
+    const tail = location.hash.split("/").slice(3).join("/");
+    const sel = h("select", { id: "cmpYear", onchange: e => { location.hash = `#/vergleich/${e.target.value}${tail ? "/" + tail : ""}`; } },
       years.map(y => h("option", { value: y, selected: y === year ? true : null }, String(y))));
     const list = countries.countries.slice().sort((a, b) => countryName(a).localeCompare(countryName(b), LANG));
     const rows = list.map(c => {
@@ -980,7 +1117,7 @@
       const wb = intl[c.code].wb_interest[year];
       return h("tr", null,
         h("td", null, h("a", { href: `#/${c.code}/${year}` }, countryName(c))),
-        ...(t ? [h("td", { class: "r" }, nf2.format(t.cost_per_100), h("div", { class: "muted" }, t.cost_low !== t.cost_high ? L("inkl. Projektion", "incl. projection") : L("berechnet", "calculated"))),
+        ...(t ? [h("td", { class: "r" }, nf2.format(t.cost_per_100), h("div", { class: "muted" }, t.incomplete_start ? L("angebrochenes Startjahr, nicht repräsentativ", "incomplete first year, not representative") : t.cost_low !== t.cost_high ? L("inkl. Projektion", "incl. projection") : L("berechnet", "calculated"))),
           h("td", { class: "r" }, yrs(t.avg_term)),
           h("td", { class: "r" }, nf2.format(t.cost_per_100_year)),
           h("td", { class: "r" }, pct(t.avg_yield))]
@@ -989,7 +1126,9 @@
         h("td", { class: "r" }, w && w.debt !== undefined ? pctNum(w.debt, nf1) : "–"),
         h("td", { class: "r" }, wb !== undefined ? money(wb, c.currency) : "–"));
     });
-    app.replaceChildren(h("h1", null, L(`G20-Vergleich ${year}`, `G20 comparison ${year}`)),
+    app.replaceChildren(h("h1", null, L("G20-Vergleich", "G20 comparison")),
+      tl,
+      h("h2", { id: "cmp-year" }, L(`Alle G20-Länder im Jahr ${year}`, `All G20 countries in ${year}`)),
       h("div", { class: "controls" }, h("label", { for: "cmpYear" }, L("Jahr", "Year"), sel)),
       h("p", { class: "note compare" }, h("strong", null, L("Lesehilfe. ", "How to read. ")),
         L("Die ersten vier Spalten beziehen sich auf die im Jahr erfassten Emissionen des Zentralstaats und liegen nur für Länder mit Einzelemissionsdaten vor. ",
@@ -1005,7 +1144,7 @@
             h("th", { class: "r" }, L("je 100 u. Jahr", "per 100 and year")), h("th", { class: "r" }, L("Ø Rendite", "Avg. yield")), h("th", { class: "r" }, L("Nettozinsen % BIP", "Net interest % GDP")),
             h("th", { class: "r" }, L("Schulden % BIP", "Debt % GDP")), h("th", { class: "r" }, L("gezahlte Zinsen (Weltbank)", "interest paid (World Bank)")))),
         h("tbody", null, rows)))),
-      h("p", { class: "muted" }, L("Status: Spalten 2–5 ", "Status: columns 2–5 "), chip("calc"), L(" (bei TIPS/inflationsindexierten Anleihen teils ", " (partly "), chip("proj"), L("), Spalten 6–8 ", " for TIPS/inflation-linked bonds), columns 6–8 "), chip("intl"),
+      h("p", { class: "muted" }, L("Status: Spalten 2–5 ", "Status: columns 2–5 "), chip("calc"), L(" (Vereinigtes Königreich: ", " (United Kingdom: "), chip("derived"), ")", L(" (bei TIPS/inflationsindexierten Anleihen teils ", " (partly "), chip("proj"), L("), Spalten 6–8 ", " for TIPS/inflation-linked bonds), columns 6–8 "), chip("intl"),
         L(". Die Afrikanische Union und die EU sind als G20-Mitglieder keine Staaten mit eigener Zentralregierungsschuld im Sinne dieser Seite und werden nicht einzeln aufgeführt.",
           ". The African Union and the EU, as G20 members, are not states with their own central government debt in the sense of this site and are not listed individually.")));
   }
@@ -1044,7 +1183,7 @@
           "How much interest burden a government commits depends heavily on the interest-rate level during its term and on the maturities it inherits from predecessors and has to refinance. "),
         L("Beides steht deshalb in eigenen Spalten. Für eine Bewertung gehören zudem Laufzeitwahl, Konjunktur und Krisen dazu.", "Both are therefore shown in separate columns. An assessment would also need to consider the choice of maturities, the economic cycle and crises.")),
       h("section", { class: "card" }, h("div", { class: "table-scroll" }, h("table", { class: "wrap-cells" },
-        h("thead", null, h("tr", null, h("th", null, L("Regierung", "Government")), h("th", { class: "r" }, L(`Zinslast, berechnet (ab ${g.data_from})`, `Interest burden, calculated (from ${g.data_from})`)),
+        h("thead", null, h("tr", null, h("th", null, L("Regierung", "Government")), h("th", { class: "r" }, c.code === "GB" ? L(`Zinslast, berechnet mit abgeleiteten Stammdaten (ab ${g.data_from})`, `Interest burden, calculated with derived reference data (from ${g.data_from})`) : L(`Zinslast, berechnet (ab ${g.data_from})`, `Interest burden, calculated (from ${g.data_from})`)),
           h("th", { class: "r" }, L("je 100 Erlös", "per 100 of proceeds")), h("th", { class: "r" }, L("Zinsniveau (Ø Rendite)", "Interest-rate level (avg. yield)")),
           h("th", { class: "r" }, L("übernommene Fälligkeiten", "inherited maturities")),
           hasModel ? h("th", { class: "r" }, L("modelliert (1960–1998)", "modelled (1960–1998)")) : null)),
@@ -1107,6 +1246,7 @@
       sec(L("Woran man erkennt, wie sicher eine Zahl ist", "How to tell how reliable a figure is"),
         h("ul", { class: "status-legend" },
           h("li", null, chip("calc"), L(" – aus jedem einzelnen Kredit nachgerechnet und gegen die veröffentlichten Daten geprüft.", " – recalculated from every single loan and checked against the published data.")),
+          h("li", null, chip("derived"), L(" – ebenso aus einzelnen Krediten berechnet, aber Fälligkeitstag und Zinstermine waren nicht veröffentlicht und wurden aus den Renditen rekonstruiert (Vereinigtes Königreich).", " – also calculated from individual loans, but maturity date and interest dates were not published and were reconstructed from the yields (United Kingdom).")),
           h("li", null, chip("official"), L(" – so von einer Behörde veröffentlicht.", " – published as such by an authority.")),
           h("li", null, chip("intl"), L(" – aus einer internationalen Datenbank (Weltbank, IWF), oft etwas anders abgegrenzt.", " – from an international database (World Bank, IMF), often defined slightly differently.")),
           h("li", null, chip("model"), L(" – geschätzt mit einer offen beschriebenen Annahme.", " – estimated with an openly described assumption.")),

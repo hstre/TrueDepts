@@ -391,12 +391,15 @@ def bill_bond_equivalent_yield(price, settle, maturity) -> float:
 
 
 def floating_rate(nominal, spread, price, settle, maturity, interest_start, index_rate, last_known: dt.date,
-                  accrued_per100=None, scenarios=(-0.02, 0.0, 0.02)) -> Result:
-    """US-FRN: vierteljährlicher Kupon = Index (13-Wochen-Bill, täglich act/360) + fester Aufschlag.
+                  accrued_per100=None, scenarios=(-0.02, 0.0, 0.02), lockout=None) -> Result:
+    """US-FRN: vierteljährlicher Kupon aus täglicher Verzinsung (act/360) mit Index (13-Wochen-Bill) + festem Aufschlag.
 
-    index_rate(d) liefert den für Tag d geltenden Indexsatz (dezimal) bis einschließlich last_known.
-    Danach Projektion: letzter Indexsatz + Szenario (tief/mittel/hoch), nicht unter 0.
-    Der Aufschlag (spread) und bekannte Indextage sind feststehend.
+    index_rate(d) liefert den am Tag d geltenden Indexsatz (dezimal) bis einschließlich last_known; die Regel, ab wann
+    ein neuer Satz gilt (Kalendertag nach der Auktion), steckt in index_rate.
+    lockout(pay) liefert den Beginn der Sperrfrist vor dem Zahlungstermin pay (zwei Geschäftstage davor): Ab diesem Tag
+    gilt bis zur Zahlung der an diesem Tag geltende Indexsatz.
+    Tageszins = max(0, Index + Aufschlag) / 360 (Mindestzins null).
+    Nach last_known: Projektion mit letztem Indexsatz + Szenario (tief/mittel/hoch); Aufschlag und bekannte Tage fest.
     """
     sch = Schedule(maturity, interest_start, 4, False, eom=True)
     clean = nominal * price / 100
@@ -406,23 +409,27 @@ def floating_rate(nominal, spread, price, settle, maturity, interest_start, inde
     if ai:
         res.flows.append(Flow(settle, "accrued", -ai))
     last_rate = index_rate(last_known)
-    prev = interest_start
     for i in range(1, len(sch.grid)):
         pay = sch.grid[i]
         start = max(sch.grid[i - 1], interest_start)
         if pay <= settle:
-            prev = pay
             continue
+        lock = lockout(pay) if lockout else pay
         fixed_amt = 0.0
         proj = [0.0, 0.0, 0.0]
         d = start
         while d < pay:
-            if d <= last_known:
-                fixed_amt += nominal * (index_rate(d) + spread) / 360
+            rate_day = min(d, lock)
+            if rate_day <= last_known:
+                fixed_amt += nominal * max(0.0, index_rate(rate_day) + spread) / 360
             else:
-                fixed_amt += nominal * spread / 360
-                for k, sc in enumerate(scenarios):
-                    proj[k] += nominal * max(0.0, last_rate + sc) / 360
+                # Aufschlag fest, Index als Szenario; Mindestzins null auf die Summe
+                vals = [nominal * max(0.0, last_rate + sc + spread) / 360 for sc in scenarios]
+                base = nominal * max(0.0, spread) / 360 if spread > 0 else 0.0
+                base = min(base, min(vals))
+                fixed_amt += base
+                for k in range(3):
+                    proj[k] += vals[k] - base
             d += dt.timedelta(days=1)
         res.flows.append(Flow(pay, "coupon", fixed_amt))
         if any(proj):

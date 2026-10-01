@@ -142,21 +142,61 @@ def tips_ratio(a, refcpi: RefCPI, dates):
 # ---------------------------------------------------------------------------
 
 
+def us_holidays(y):
+    """Bundesfeiertage (Bond-Markt geschlossen) inkl. Good Friday – Näherung der „U.S. Government Securities Business Days“."""
+    def nth(month, weekday, n):
+        d = dt.date(y, month, 1)
+        d += dt.timedelta((weekday - d.weekday()) % 7)
+        return d + dt.timedelta(7 * (n - 1))
+
+    def last(month, weekday):
+        d = dt.date(y, month + 1, 1) - dt.timedelta(1)
+        return d - dt.timedelta((d.weekday() - weekday) % 7)
+
+    def observed(d):
+        return d - dt.timedelta(1) if d.weekday() == 5 else d + dt.timedelta(1) if d.weekday() == 6 else d
+
+    h = {observed(dt.date(y, 1, 1)), nth(1, 0, 3), nth(2, 0, 3), last(5, 0), observed(dt.date(y, 7, 4)), nth(9, 0, 1),
+         nth(10, 0, 2), observed(dt.date(y, 11, 11)), nth(11, 3, 4), observed(dt.date(y, 12, 25)),
+         bonds.easter_sunday(y) - dt.timedelta(2)}
+    if y >= 2022:
+        h.add(observed(dt.date(y, 6, 19)))
+    return h
+
+
+def us_bday_before(d, n):
+    """n Geschäftstage vor d."""
+    while n:
+        d -= dt.timedelta(1)
+        if d.weekday() < 5 and d not in us_holidays(d.year):
+            n -= 1
+    return d
+
+
+def frn_lockout(pay):
+    """Beginn der Sperrfrist: zwei Geschäftstage vor dem Zinstermin (Treasury FRN)."""
+    return us_bday_before(pay, 2)
+
+
 class BillIndex:
-    """Indexsatz der FRN: Geldmarktrendite der jeweils letzten 13-Wochen-Bill-Auktion (aus denselben Daten)."""
+    """Indexsatz der FRN: High Rate der jeweils letzten 13-Wochen-Bill-Auktion als Geldmarktrendite (act/360, mit der
+    tatsächlichen Laufzeit der Bill). Ein neuer Satz gilt ab dem Kalendertag nach dem Auktionstag."""
 
     def __init__(self, auctions):
         pts = {}
         for a in auctions:
             if a["instrument"] == "Bill" and a["term"] in ("13-Week", "91-Day", "3-Month") and a["discount_rate"] is not None:
                 d = a["discount_rate"] / 100
-                pts[a["date"]] = 360 * d / (360 - 91 * d)
+                days = (a["maturity"] - a["settle"]).days if a["maturity"] and a["settle"] else 91
+                pts[a["date"]] = 360 * d / (360 - days * d)
         self.dates = sorted(pts)
         self.rates = [pts[d] for d in self.dates]
-        self.last = self.dates[-1]
+        # Der letzte bekannte Satz gilt bis einschließlich zum Tag der nächsten (noch nicht bekannten) Auktion,
+        # in der Regel eine Woche später.
+        self.last = self.dates[-1] + dt.timedelta(days=7)
 
     def __call__(self, d: dt.date) -> float:
-        i = bisect.bisect_right(self.dates, d) - 1
+        i = bisect.bisect_left(self.dates, d) - 1  # nur Auktionen vor dem Tag d gelten
         return self.rates[max(i, 0)]
 
 
@@ -218,9 +258,10 @@ def compute(a, refcpi: RefCPI, bill_index: BillIndex):
         if a["price_pub"] is None:
             return None, "none", "Kein Kurs veröffentlicht.", None, None, None
         res = bonds.floating_rate(n, a["spread"], a["price_pub"], a["settle"], a["maturity"], a["interest_start"],
-                                  bill_index, bill_index.last, accrued_per100=a["accrued_per100"])
+                                  bill_index, bill_index.last, accrued_per100=a["accrued_per100"], lockout=frn_lockout)
         future = not all(f.fixed for f in res.flows)
-        note = ("Kupon = Rendite der 13-Wochen-Bill (aus den Auktionsdaten) + fester Aufschlag; vereinfachte tägliche Zinsberechnung. "
+        note = ("Kupon = High Rate der 13-Wochen-Bill (aus den Auktionsdaten, gültig ab dem Folgetag der Auktion) + fester Aufschlag, "
+                "täglich act/360 mit Mindestzins null; Sperrfrist zwei Geschäftstage vor jedem Zinstermin. "
                 + ("Künftiger Indexsatz: letzter Wert ±2 %-Punkte (Projektion)." if future else ""))
         return res, ("proj" if future else "calc"), note, None, a["price_pub"], "veröffentlicht"
     return None, "none", "Unbekannte Wertpapierart.", None, None, None

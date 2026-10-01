@@ -338,7 +338,7 @@ def compute(o, line, rpi: RPI):
         res = bonds.fixed_rate(n, o["coupon"], price, o["settle"], mat, start, freq=2, long_first=lf, accrued_per100=ai)
         if exdiv(sch, o["settle"]):
             _drop_first_coupon(res, o["settle"])
-        return res, "calc", note, y, price, src
+        return res, "derived", note, y, price, src
     # Linker mit 3-Monats-Verzögerung
     base = line.get("base_ref_rpi")
     if base is None:
@@ -370,7 +370,7 @@ def compute(o, line, rpi: RPI):
     if line.get("base_source") != "Erstemission in den Daten":
         note2 = ((note2 + " ") if note2 else "") + f"Index-Basis: {line['base_source']}."
     note = " ".join(x for x in (note, note2) if x) or None
-    return res, ("proj" if future else "calc"), note, y, price, src
+    return res, ("proj" if future else "derived"), note, y, price, src
 
 
 def refine_line(lo, fit, top):

@@ -83,6 +83,7 @@ def build_gb(today: dt.date, intl: dict):
     all_issues = [i for y in sorted(issues_by_year) for i in issues_by_year[y]]
     last_auction = max(o["date"] for o in ops)
 
+    data_start = min(o["date"] for o in ops)
     summary = []
     for year in range(FIRST_YEAR, today.year + 1):
         items = issues_by_year.get(year, [])
@@ -91,12 +92,16 @@ def build_gb(today: dt.date, intl: dict):
         weo = intl["GB"]["weo"].get(str(year))
         general = {"weo": weo} if weo else None
         v = build_vintage(year, items, None, wb_int, weo.get("debt") if weo else None, ctx, govs, today, last_auction,
-                          rpi.last_known, general=general, coverage_allowed=False)
+                          rpi.last_known, general=general, coverage_allowed=False, country_derived=True)
         v["country"] = "GB"
         v["scope_note"] = SCOPE_NOTE
         if items:
             n8 = sum(1 for i in items if i["instrument"] == "IL Gilt (8M)")
             v["uncovered"] = {"linker8": n8, "linker8_nominal": r1(sum(i["allotted"] for i in items if i["instrument"] == "IL Gilt (8M)"))}
+        # Angebrochenes Startjahr: Die Datenreihe beginnt erst im Laufe des Jahres; die Kennzahlen beruhen dann auf wenigen,
+        # nicht repräsentativen Emissionen (z. B. nur lange Anleihen) und werden als solche gekennzeichnet.
+        if v["totals"] and year == data_start.year and data_start > dt.date(year, 2, 1):
+            v["totals"]["incomplete_start"] = iso(data_start)
         dump(SITE / "gb" / "years" / f"{year}.json", v)
         summary.append({k: v[k] for k in ("year", "status", "totals", "paid", "split", "coverage", "context", "aggregate", "general_gov")}
                        | {"govs": [g["id"] for g in v["governments"]]})

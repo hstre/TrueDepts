@@ -16,6 +16,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import json
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -470,7 +471,7 @@ def political_context(issues, govs, last_date):
 
 
 def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction, ilb_last, agg=None, agg_gov=None,
-                  general=None, coverage_allowed=True):
+                  general=None, coverage_allowed=True, country_derived=False):
     priced = [i for i in items if "cost" in i]
     has_issue_data = bool(items)
     totals = None
@@ -517,6 +518,10 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
         status = NONE
     elif statuses <= {CALC, NONE}:
         status = CALC
+    elif statuses <= {"derived", NONE}:
+        status = "derived"          # berechnet mit abgeleiteten Stammdaten (Vereinigtes Königreich)
+    elif "derived" in statuses or (country_derived and statuses & {"proj"}):
+        status = "derived_mixed"
     else:
         status = "mixed"
 
@@ -532,7 +537,14 @@ def build_vintage(year, items, rep, wb_int, imf, ctx, govs, today, last_auction,
             "share_net": round(share_net, 4) if share_net is not None else None,
             "as_of": rep["as_of"], "complete_year": rep["complete_year"],
         }
-        if totals:
+        # Die Kostenaufteilung braucht denselben Stichtag für Brutto/Tilgungen und die erfassten Emissionen. Liegen
+        # Emissionen nach dem Stand der amtlichen Summen (z. B. Schuldenbericht bis Juli, Emissionen bis September),
+        # wird die Aufteilung ausgesetzt statt einen Anteil auf einen anderen Zeitraum zu übertragen.
+        last_settle = max((i["settle"] for i in priced), default=None)
+        as_of_iso = rep["as_of"] if re.match(r"^\d{4}-\d\d-\d\d$", str(rep["as_of"])) else None
+        if totals and as_of_iso and last_settle and last_settle > as_of_iso:
+            split["allocation_suspended"] = {"as_of": as_of_iso, "issues_through": last_settle}
+        elif totals:
             split["cost_net"] = r1(totals["cost"] * share_net)
             split["cost_refinancing"] = r1(totals["cost"] * (1 - share_net))
             split["allotted_net"] = r1(totals["allotted"] * share_net)

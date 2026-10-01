@@ -94,6 +94,7 @@ def build_us(today: dt.date, intl: dict):
                         "interest_as_of": f"{y}-12-31" if e["complete_year"] else f"{y} ({e['months']} Monate)"})
         reps[y] = rep
 
+    data_start = min(o["date"] for o in rows)
     summary = []
     for year in range(FIRST_YEAR, today.year + 1):
         items = issues_by_year.get(year, [])
@@ -119,6 +120,10 @@ def build_us(today: dt.date, intl: dict):
                                    + (" (unvollständig: vor 1979 begebene Papiere fehlen)" if rep.get("redemptions_incomplete") else ""))
         v["scope_note"] = ("Erfasst sind alle marktfähigen Treasury-Wertpapiere aus Auktionen. Nicht enthalten: nicht marktfähige "
                            "Schulden (Treuhandfonds der Sozialversicherung, Sparbriefe) sowie Bundesstaaten und Kommunen.")
+        # Angebrochenes Startjahr: Die Datenreihe beginnt erst im Laufe des Jahres; die Kennzahlen beruhen dann auf wenigen,
+        # nicht repräsentativen Emissionen (z. B. nur lange Anleihen) und werden als solche gekennzeichnet.
+        if v["totals"] and year == data_start.year and data_start > dt.date(year, 2, 1):
+            v["totals"]["incomplete_start"] = iso(data_start)
         dump(SITE / "us" / "years" / f"{year}.json", v)
         summary.append({k: v[k] for k in ("year", "status", "totals", "paid", "split", "coverage", "context", "aggregate", "general_gov")}
                        | {"govs": [g["id"] for g in v["governments"]]})

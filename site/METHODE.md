@@ -13,11 +13,16 @@ Fälligkeit. So wird sichtbar, welche Zahlungspflichten eine Regierung ihren Nac
 1. **Keine erfundenen Jahrgangswerte.** Ein Schuldenstand oder eine jährliche Zinssumme reicht nicht,
    um die Kosten eines Kreditjahrgangs zu rekonstruieren. Jahrgangskosten werden nur aus Einzelemissionen
    berechnet. Wo diese fehlen, steht „keine ausreichenden Daten“ – auch wenn es für das Jahr andere Reihen gibt.
+   **Einzige Ausnahme:** Für Deutschland 1960–1998 wird eine Größenordnung aus amtlichen Bundesbank-Aggregaten
+   (Brutto-Absatz und Emissionsrendite je Monat) mit ausdrücklichen Laufzeitannahmen gezeigt – immer als Spanne,
+   immer mit dem Status „modelliert“, nie aus Schuldenstand oder Zinssumme abgeleitet und gegen die exakt
+   berechneten Jahre ab 1999 rückgeprüft (4.9).
 2. **Jede Zahl hat einen sichtbaren Status:**
 
    | Status | Bedeutung |
    |---|---|
    | **aus einzelnen Emissionen berechnet** | Ergebnis vollständig aus veröffentlichten Emissionsdaten (Kurs, Kupon, Laufzeit, Volumen) und amtlichen Index-Verhältniszahlen |
+   | **berechnet mit abgeleiteten Stammdaten** | wie oben, aber Fälligkeitstag und Kuponkalender sind nicht veröffentlicht, sondern aus den Renditen derselben Emissionen rekonstruiert (Vereinigtes Königreich, 7.4); die gute Anpassung an diese Renditen ist keine unabhängige Bestätigung |
    | **modelliert** | enthält eine ausdrücklich genannte Annahme oder Zuordnungsregel (z. B. Aufteilung Anschlussfinanzierung/Nettokreditaufnahme, US-Dollar-Umrechnung) |
    | **Projektion** | hängt von künftiger Inflation ab; als Spanne aus drei Szenarien dargestellt |
    | **amtliche Statistik** | unverändert aus einer amtlichen Reihe übernommen (z. B. gezahlte Zinsen laut Schuldenbericht) |
@@ -125,6 +130,12 @@ Kosten, die rechnerisch auf zusätzliche Verschuldung entfallen = Jahrgangskoste
 ```
 Einschränkungen: Brutto enthält unterjährig mehrfach umgeschlagene Geldmarktpapiere; die Bruttosumme des
 Schuldenberichts umfasst auch Instrumente außerhalb der Auktionsdaten (Abdeckungsgrad wird angezeigt).
+
+**Gemeinsamer Stichtag.** Brutto, Tilgungen und die erfassten Emissionen müssen denselben Zeitraum abdecken. Im
+laufenden Jahr reichen die amtlichen Summen oft weniger weit als die Emissionsdaten (z. B. Schuldenbericht bis Juli,
+Auktionen bis September). Dann wird die Kostenaufteilung **ausgesetzt**, statt einen Anteil aus dem einen Zeitraum
+auf den anderen zu übertragen. Für die USA, wo Brutto und Tilgungen aus den Auktionsdaten summiert werden, zählen im
+laufenden Jahr nur Emissionen und Fälligkeiten bis zur letzten Valuta; `pipeline.verify` prüft das für jedes Jahr.
 
 ### 4.6 Risiko der Anschlussfinanzierung – getrennt
 Die spätere Refinanzierung fälliger Beträge gehört **nicht** zu den feststehenden Kosten des ursprünglichen
@@ -272,8 +283,15 @@ Jede Zahl trägt ihren Status. Aus gesamten Zinszahlungen oder Schuldenständen 
 - TIPS: Der veröffentlichte Kurs enthält bereits die Index-Verhältniszahl; gerechnet wird mit dem realen Kurs. Index-Verhältniszahlen
   aus amtlichen Referenz-CPI-Werten ab Mai 2008; davor Interpolation zwischen amtlichen Referenz-CPI-Werten der Emissionstage
   (modelliert); nach dem letzten amtlichen Wert Projektion mit 0/2/4 % Inflation; Deflationsschutz der Rückzahlung.
-- FRN: Kupon = Rendite der jeweils letzten 13-Wochen-Bill (aus denselben Daten) + fester Aufschlag, vereinfacht täglich act/360;
-  künftiger Index: letzter Wert ±2 %-Punkte (Projektion).
+- FRN: Tageszins = max(0, Index + fester Aufschlag) / 360. Index = High Rate der jeweils letzten 13-Wochen-Bill-Auktion
+  als Geldmarktrendite mit der tatsächlichen Laufzeit der Bill (aus denselben Daten); ein neuer Satz gilt ab dem
+  Kalendertag nach der Auktion. Sperrfrist: Ab zwei Geschäftstagen vor jedem Zinstermin gilt der an diesem Tag geltende
+  Satz bis zur Zahlung (Geschäftstage nach US-Bundesfeiertagen einschließlich Karfreitag, Näherung des
+  SIFMA-Kalenders). Künftiger Index: letzter Wert ±2 %-Punkte (Projektion). Tageszinsen werden nicht wie bei Treasury
+  einzeln gerundet.
+- Angebrochenes Startjahr: Die Auktionsdaten beginnen am 31.10.1979; 1979 enthält nur zwei lange Emissionen. Die
+  Kennzahlen dieses Jahres sind als „nicht repräsentativ“ markiert und im Zeitverlauf ausgelassen (ebenso das
+  Vereinigte Königreich 1998, Datenbeginn Mai 1998).
 - Zugeteiltes Volumen einschließlich Zuteilungen an die Federal Reserve (SOMA); ausgewiesen.
 - Brutto/Tilgungen werden aus den Auktionsdaten summiert; Tilgungen vor 2010 unvollständig (vor 1979 begebene Papiere fehlen).
   Im laufenden Jahr zählen beide Seiten nur bis zum Datenstand (letzte Valuta): Emissionen mit Valuta und Tilgungen mit
@@ -317,6 +335,14 @@ je 100 und Laufzeitjahr      = Kosten je 100 Erlös / volumengewichtete Ø Laufz
 ```
 Lange Kredite können insgesamt mehr Zinsen kosten und trotzdem günstigere jährliche Konditionen haben; die Laufzeit steht deshalb
 immer neben dem Gesamtwert. US-Jahrgänge sind wegen der vielen Bills sehr kurzlaufend (Ø um 1–2 Jahre), deutsche Jahrgänge länger.
+
+### 7.5a Zeitverlauf zweier Länder
+Auf der Vergleichsseite lassen sich zwei Länder untereinander mit gemeinsamer Zeitachse darstellen. Bei Kennzahlen in
+Prozent bzw. je 100 Erlös haben beide Diagramme dieselbe Skala; bei Beträgen in Landeswährung (Weltbank) nur dieselbe
+Zeitachse. Markiert sind große Krisen und Umbrüche (Ölkrisen 1973–75 und 1979–82, Asien-/Russlandkrise 1997–98,
+Dotcom-Blase 2000–02, Finanzkrise 2007–09, Euro-Schuldenkrise 2010–12, Corona 2020–21, Energiepreis- und
+Inflationsschock 2022–23). Die Auswahl ist redaktionell, die Jahre sind gerundet; die Markierung zeigt zeitliche Nähe,
+keinen nachgewiesenen Zusammenhang.
 
 ### 7.6 Politische Zuordnung
 Die Zuordnung zu Regierungen nach Emissionstag ist zeitlich, nicht rechtlich (Kreditermächtigung und Schuldenobergrenze liegen beim

@@ -15,11 +15,16 @@ obligations a government leaves to its successors.
 1. **No invented vintage figures.** A debt stock or an annual interest total is not enough to reconstruct the
    cost of a borrowing vintage. Vintage costs are only calculated from individual issues. Where these are
    missing, the site shows “insufficient data” – even if other series exist for that year.
+   **Sole exception:** for Germany 1960–1998 an order of magnitude is shown from official Bundesbank aggregates
+   (gross sales and issue yield per month) with explicit term assumptions – always as a range, always with the
+   status “modelled”, never derived from debt levels or interest totals, and back-tested against the exactly
+   calculated years from 1999 (4.9).
 2. **Every figure has a visible status:**
 
    | Status | Meaning |
    |---|---|
    | **calculated from individual issues** | result derived entirely from published issuance data (price, coupon, maturity, volume) and official index ratios |
+   | **calculated with derived reference data** | as above, but maturity date and coupon calendar are not published; they are reconstructed from the yields of the same issues (United Kingdom, 7.4); the good fit to these yields is not an independent confirmation |
    | **modelled** | contains an explicitly stated assumption or allocation rule (e.g. split into refinancing/net borrowing, US-dollar conversion) |
    | **projection** | depends on future inflation or rates; shown as a range from three scenarios |
    | **official statistics** | taken unchanged from an official series (e.g. interest paid according to the debt report) |
@@ -127,6 +132,12 @@ Cost attributed to additional borrowing = vintage cost × share
 ```
 Limitations: gross borrowing contains money-market paper rolled over several times within the year; the debt
 report's gross total also includes instruments outside the auction data (coverage is shown).
+
+**Common cut-off date.** Gross borrowing, redemptions and the covered issues must cover the same period. In the
+current year the official totals often reach less far than the issuance data (e.g. debt report up to July, auctions
+up to September). The cost split is then **suspended** instead of applying a share from one period to another. For the
+United States, where gross borrowing and redemptions are summed from the auction data, the current year only counts
+issues and maturities up to the last settlement date; `pipeline.verify` checks this for every year.
 
 ### 4.6 Refinancing risk – shown separately
 Refinancing maturing amounts later is **not** part of the fixed cost of the original borrowing. It is shown
@@ -273,8 +284,15 @@ levels.
   official reference CPI values from May 2008; before that interpolation between official reference CPI values on
   issue dates (modelled); after the last official value projection with 0/2/4% inflation; deflation floor on
   redemption.
-- FRN: coupon = yield of the most recent 13-week bill (from the same data) + fixed spread, simplified daily act/360;
-  future index: last value ±2 percentage points (projection).
+- FRN: daily interest = max(0, index + fixed spread) / 360. Index = high rate of the most recent 13-week bill auction
+  as a money-market yield using the bill's actual term (from the same data); a new rate takes effect on the calendar day
+  after the auction. Lockout: from two business days before each interest payment date, the rate in effect on that day
+  applies until payment (business days based on US federal holidays including Good Friday, an approximation of the SIFMA
+  calendar). Future index: last value ±2 percentage points (projection). Daily interest amounts are not rounded
+  individually as Treasury does.
+- Incomplete first year: the auction data begin on 31 Oct 1979; 1979 contains only two long-term issues. That year's
+  measures are marked “not representative” and omitted from the time series (likewise the United Kingdom 1998, data
+  from May 1998).
 - Allotted volume includes allotments to the Federal Reserve (SOMA); shown.
 - Gross borrowing/redemptions are summed from the auction data; redemptions before 2010 are incomplete (securities
   issued before 1979 are missing).
@@ -322,6 +340,14 @@ Average issue yield             = volume-weighted over all issues of the year
 Long-term borrowing can cost more interest in total and still have cheaper annual terms; the term is therefore
 always shown next to the total. US vintages are very short because of the many bills (average around 1–2 years),
 German vintages are longer.
+
+### 7.5a Two countries over time
+The comparison page can show two countries one below the other on a common time axis. For measures in percent or per
+100 of proceeds both charts share the same scale; for amounts in local currency (World Bank) only the time axis. Major
+crises and upheavals are marked (oil crises 1973–75 and 1979–82, Asian/Russian crisis 1997–98, dot-com bubble
+2000–02, financial crisis 2007–09, euro debt crisis 2010–12, COVID-19 2020–21, energy price and inflation shock
+2022–23). The selection is editorial and the years are rounded; the marking shows proximity in time, not a demonstrated
+link.
 
 ### 7.6 Political attribution
 Assignment to governments by issue date is temporal, not legal (borrowing authority and the debt ceiling lie with

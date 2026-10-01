@@ -136,3 +136,38 @@ class USConventions(unittest.TestCase):
         self.assertLess(lo, mid)
         self.assertLess(mid, hi)
         self.assertAlmostEqual(mid, 1000 * 0.041 * (D(2028, 1, 31) - D(2026, 1, 31)).days / 360, delta=0.5)
+
+
+class FrnRulesTest(unittest.TestCase):
+    """Treasury-FRN: neuer Index ab dem Folgetag der Auktion, Sperrfrist vor dem Zinstermin, Mindestzins null."""
+
+    def test_index_effective_day_after_auction(self):
+        from pipeline.us_import import BillIndex
+        bills = [{"instrument": "Bill", "term": "13-Week", "discount_rate": 4.0, "date": D(2026, 3, 2),
+                  "settle": D(2026, 3, 5), "maturity": D(2026, 6, 4)},
+                 {"instrument": "Bill", "term": "13-Week", "discount_rate": 5.0, "date": D(2026, 3, 9),
+                  "settle": D(2026, 3, 12), "maturity": D(2026, 6, 11)}]
+        idx = BillIndex(bills)
+        self.assertAlmostEqual(idx(D(2026, 3, 9)), 360 * 0.04 / (360 - 91 * 0.04))  # Auktionstag: noch alter Satz
+        self.assertAlmostEqual(idx(D(2026, 3, 10)), 360 * 0.05 / (360 - 91 * 0.05))  # Folgetag: neuer Satz
+
+    def test_lockout_keeps_rate_until_payment(self):
+        pay = D(2026, 4, 30)
+        rate = lambda d: 0.05 if d >= D(2026, 4, 29) else 0.04  # Satzwechsel innerhalb der Sperrfrist
+        lock = lambda p: D(2026, 4, 28)
+        with_lock = bonds.floating_rate(1000.0, 0.0, 100.0, D(2026, 1, 31), pay, D(2026, 1, 31), rate, D(2026, 12, 31), lockout=lock)
+        without = bonds.floating_rate(1000.0, 0.0, 100.0, D(2026, 1, 31), pay, D(2026, 1, 31), rate, D(2026, 12, 31))
+        days = (pay - D(2026, 1, 31)).days
+        self.assertAlmostEqual(with_lock.cost, 1000 * 0.04 * days / 360, places=6)
+        self.assertAlmostEqual(without.cost - with_lock.cost, 1000 * 0.01 / 360, places=6)  # ein Tag zum höheren Satz
+
+    def test_us_lockout_two_business_days(self):
+        from pipeline.us_import import frn_lockout
+        self.assertEqual(frn_lockout(D(2026, 4, 30)), D(2026, 4, 28))   # Donnerstag -> Dienstag
+        self.assertEqual(frn_lockout(D(2026, 1, 31)), D(2026, 1, 29))   # Samstag -> Donnerstag
+        self.assertEqual(frn_lockout(D(2026, 7, 7)), D(2026, 7, 2))     # 3. Juli (Ersatz für 4. Juli) ist frei
+
+    def test_minimum_rate_zero(self):
+        res = bonds.floating_rate(1000.0, -0.01, 100.0, D(2026, 1, 31), D(2026, 4, 30), D(2026, 1, 31),
+                                  lambda d: 0.002, D(2026, 12, 31))
+        self.assertAlmostEqual(res.cost, 0.0, places=9)
