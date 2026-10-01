@@ -562,7 +562,9 @@
           sp.cost_net_model ? h("div", { class: "sub" }, L("Zinslast rechnerisch auf zusätzliche Verschuldung (modelliert): ", "Interest burden attributable to additional borrowing (modelled): "), h("strong", null, `${money(sp.cost_net_model[0])} – ${money(sp.cost_net_model[2])}`)) : null,
           sp.source === "bundesbank" ? h("div", { class: "sub" }, L("Nur Anleihen des Bundes; netto = Veränderung des Umlaufs laut Bundesbank, Tilgung = Brutto − netto. Umstellungen der Statistik (z. B. 1957, 1990) können Sprünge verursachen.",
             "Federal bonds only; net = change in amount outstanding according to the Bundesbank, redemption = gross − net. Statistical changes (e.g. 1957, 1990) can cause jumps.")) : null,
-          !sp.complete_year ? h("div", { class: "sub" }, L(`Amtliche Werte bis ${dateDe(sp.as_of)}.`, `Official values up to ${dateDe(sp.as_of)}.`)) : null]));
+          !sp.complete_year ? h("div", { class: "sub" }, sp.source === "auctions"
+            ? L(`Laufendes Jahr: Emissionen und Tilgungen jeweils mit Valuta bzw. Fälligkeit bis ${dateDe(sp.as_of)}.`, `Current year: issues and redemptions each with settlement or maturity up to ${dateDe(sp.as_of)}.`)
+            : L(`Amtliche Werte bis ${dateDe(sp.as_of)}.`, `Official values up to ${dateDe(sp.as_of)}.`)) : null]));
     } else {
       tiles.push(tile(T(2, t2[0], t2[1]), chip("none"), h("div", { class: "value nodata" }, L("Keine amtlichen Brutto-/Tilgungsdaten", "No official gross/redemption data")), []));
     }

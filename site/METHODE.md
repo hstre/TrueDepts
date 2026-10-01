@@ -276,6 +276,8 @@ Jede Zahl trägt ihren Status. Aus gesamten Zinszahlungen oder Schuldenständen 
   künftiger Index: letzter Wert ±2 %-Punkte (Projektion).
 - Zugeteiltes Volumen einschließlich Zuteilungen an die Federal Reserve (SOMA); ausgewiesen.
 - Brutto/Tilgungen werden aus den Auktionsdaten summiert; Tilgungen vor 2010 unvollständig (vor 1979 begebene Papiere fehlen).
+  Im laufenden Jahr zählen beide Seiten nur bis zum Datenstand (letzte Valuta): Emissionen mit Valuta und Tilgungen mit
+  Fälligkeit bis zu diesem Tag. `pipeline.verify` prüft das für jedes Jahr.
 
 ### 7.4 Konventionen Vereinigtes Königreich
 - Quellen: DMO-Datenberichte „Outright Gilt Auctions“ (ab 1998, mit PAOF), „Gilt Tenders“ (ab 2008), „Other gilt operations“ und

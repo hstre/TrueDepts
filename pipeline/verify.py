@@ -135,6 +135,27 @@ def check_coverage(issues, report):
     return out
 
 
+def check_split_window(cc, issues):
+    """Brutto und Tilgungen der Aufteilung müssen denselben Zeitraum abdecken: Tilgungen werden nur bis zum Stichtag
+    (as_of) gezählt, Emissionen nur mit Valuta bis zum Stichtag. Prüft das für jedes Jahr mit Aufteilung aus Auktionsdaten."""
+    failures = []
+    n = 0
+    for p in sorted((SITE / cc / "years").glob("*.json")):
+        v = json.loads(p.read_text(encoding="utf-8"))
+        sp = v.get("split")
+        if not sp or sp.get("source") != "auctions":
+            continue
+        n += 1
+        y = v["year"]
+        cut = sp["as_of"]
+        gross = sum(i["allotted"] for i in issues if "cost" in i and i["settle"][:4] == str(y) and i["settle"] <= cut)
+        red = sum(i["redemption"] for i in issues if "cost" in i and i["maturity"][:4] == str(y) and i["maturity"] <= cut)
+        if abs(gross - sp["gross"]) > 1.0 or abs(red - sp["redemptions"]) > 1.0:
+            failures.append({"year": y, "as_of": cut, "gross": sp["gross"], "gross_check": round(gross, 1),
+                             "redemptions": sp["redemptions"], "redemptions_check": round(red, 1)})
+    return {"n": n, "failures": failures}
+
+
 def check_us():
     """USA: Rendite-Nachrechnung und Kostenidentität."""
     issues = load_issues("us")
@@ -160,18 +181,21 @@ def check_us():
                  "yield_pub": i["yield_pub"], "yield_calc": i["yield_calc"], "diff": round(d, 4), "settle_rule": i.get("price_source")}
                 for over, d, i in worst[:25] if over > 0]
     identity = check_identity(issues)
+    window = check_split_window("us", issues)
     status = defaultdict(int)
     for i in issues:
         status[i["status"]] += 1
     derived = sum(1 for i in issues if i.get("price_source") == "aus veröffentlichter Rendite berechnet")
     result = {"checked": dt.date.today().isoformat(), "yields": summary, "yield_outliers": outliers, "identity": identity,
-              "status_counts": dict(status), "price_from_yield": derived, "n": len(issues)}
+              "status_counts": dict(status), "price_from_yield": derived, "n": len(issues), "split_window": window}
     (SITE / "us" / "verification.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     print("USA – Rendite-Nachrechnung:")
     for k, v in summary.items():
         print(f"   {k:40s} n={v['n']:5d}  innerhalb ±{v['tolerance_pp']}: {v['share']:.1%}  Max {v['max_abs_diff']:.4f}")
     print(f"USA – Kostenidentität: {identity['n']} Emissionen, {identity['failures']} Abweichungen")
-    return identity["failures"]
+    print(f"USA – Zeitraum Brutto/Tilgungen: {window['n']} Jahre geprüft, {len(window['failures'])} Abweichungen"
+          + (f" {window['failures']}" if window["failures"] else ""))
+    return identity["failures"] + len(window["failures"])
 
 
 def check_gb():

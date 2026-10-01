@@ -278,6 +278,8 @@ levels.
 - Allotted volume includes allotments to the Federal Reserve (SOMA); shown.
 - Gross borrowing/redemptions are summed from the auction data; redemptions before 2010 are incomplete (securities
   issued before 1979 are missing).
+  In the current year both sides only count up to the data cut-off (last settlement date): issues settled and
+  redemptions maturing up to that day. `pipeline.verify` checks this for every year.
 
 ### 7.4 United Kingdom conventions
 - Sources: DMO data reports “Outright Gilt Auctions” (from 1998, with PAOF), “Gilt Tenders” (from 2008), “Other gilt

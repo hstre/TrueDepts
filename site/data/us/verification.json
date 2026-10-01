@@ -1,5 +1,5 @@
 {
- "checked": "2026-09-30",
+ "checked": "2026-10-01",
  "yields": {
   "Bill (Kurs aus Diskontsatz)": {
    "n": 2212,
@@ -42,8 +42,8 @@
    "tolerance_pp": 0.0015
   },
   "Bill (Kurs veröffentlicht)": {
-   "n": 5192,
-   "within_rounding": 5192,
+   "n": 5196,
+   "within_rounding": 5196,
    "share": 1.0,
    "median_abs_diff": 0.0003,
    "max_abs_diff": 0.001,
@@ -311,15 +311,19 @@
   }
  ],
  "identity": {
-  "n": 11126,
+  "n": 11130,
   "failures": 0,
   "examples": []
  },
  "status_counts": {
-  "calc": 10969,
+  "calc": 10973,
   "model": 8,
   "proj": 149
  },
  "price_from_yield": 554,
- "n": 11126
+ "n": 11130,
+ "split_window": {
+  "n": 48,
+  "failures": []
+ }
 }

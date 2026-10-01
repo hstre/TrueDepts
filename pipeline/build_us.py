@@ -68,25 +68,30 @@ def build_us(today: dt.date, intl: dict):
     all_issues = [i for y in sorted(issues_by_year) for i in issues_by_year[y]]
     last_auction = max(a["date"] for a in rows)
 
-    # Jahressummen aus den Auktionsdaten: Brutto = zugeteilt, Tilgungen = Fälligkeiten erfasster Emissionen
+    # Jahressummen aus den Auktionsdaten: Brutto = zugeteilt, Tilgungen = Fälligkeiten erfasster Emissionen.
+    # Beide Seiten müssen denselben Zeitraum abdecken: Im laufenden Jahr liegen Emissionen nur bis zur letzten Valuta
+    # vor, deshalb zählen auch nur Tilgungen bis zu diesem Tag (sonst stünden Fälligkeiten bis Jahresende gegen
+    # Emissionen bis zum Datenstand und es entstünde eine scheinbare Nettotilgung).
+    data_cutoff = max(dt.date.fromisoformat(i["settle"]) for i in all_issues if "cost" in i)
     gross = defaultdict(float)
     red = defaultdict(float)
     for i in all_issues:
         if "cost" not in i:
             continue
         gross[int(i["settle"][:4])] += i["allotted"]
-        red[int(i["maturity"][:4])] += i["redemption"]
+        if dt.date.fromisoformat(i["maturity"]) <= data_cutoff:
+            red[int(i["maturity"][:4])] += i["redemption"]
     reps = {}
     for y in gross:
+        partial = y == data_cutoff.year and data_cutoff < dt.date(y, 12, 31)
         rep = {"gross_borrowing": round(gross[y], 1), "redemptions": round(red.get(y, 0.0), 1),
-               "as_of": f"{y}-12-31", "complete_year": y < today.year, "source": "auctions",
-               "redemptions_incomplete": y < 2010}
+               "as_of": iso(data_cutoff) if partial else f"{y}-12-31", "complete_year": not partial and y < today.year,
+               "source": "auctions", "redemptions_incomplete": y < 2010}
         if y in interest:
             e = interest[y]
             rep.update({"interest_cash": e["public"], "interest_total": round(e["public"] + e["intragov"], 1),
-                        "interest_complete": e["complete_year"]})
-            if not e["complete_year"]:
-                rep["as_of"] = f"{y} ({e['months']} Monate)"
+                        "interest_complete": e["complete_year"],
+                        "interest_as_of": f"{y}-12-31" if e["complete_year"] else f"{y} ({e['months']} Monate)"})
         reps[y] = rep
 
     summary = []
@@ -103,7 +108,7 @@ def build_us(today: dt.date, intl: dict):
         # Tatsächlich gezahlte Zinsen: FiscalData (periodengerecht) statt Kassenwerte
         if rep and rep.get("interest_cash") is not None:
             v["paid"] = {"status": OFFICIAL, "cash": rep["interest_cash"], "total": rep["interest_total"],
-                         "as_of": rep["as_of"], "complete_year": rep.get("interest_complete", True),
+                         "as_of": rep["interest_as_of"], "complete_year": rep.get("interest_complete", True),
                          "labels": {"cash": "Zinsaufwand auf öffentlich gehaltene Schulden (periodengerecht, FiscalData)",
                                     "total": "einschließlich Zinsen auf intragouvernementale Schulden"}}
             if wb_int is not None:
