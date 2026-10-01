@@ -407,11 +407,26 @@
       h("label", { for: "year" }, L("Jahr", "Year"), h("span", { class: "year-step" }, prev, ySel, next)));
   }
 
+  /** Hinweis auf der Startseite: Pilotprojekt, Bitte um Daten zu fehlenden Ländern. */
+  function pilotNote(countries) {
+    const ART = { US: L("die USA", "the United States"), GB: L("das Vereinigte Königreich", "the United Kingdom") };
+    const withData = countries.countries.filter(c => c.vintage_data).map(c => ART[c.code] || countryName(c));
+    const list = withData.length > 1 ? withData.slice(0, -1).join(", ") + L(" und ", " and ") + withData[withData.length - 1] : withData.join("");
+    const missing = countries.countries.length - withData.length;
+    return h("aside", { class: "pilot", "aria-label": L("Hinweis zum Projektstand", "Project status") },
+      h("strong", null, L("Pilotprojekt. ", "Pilot project. ")),
+      L(`Aus einzelnen Emissionen berechnet sind bisher ${list}; für die übrigen ${missing} G20-Länder zeigt die Seite nur Vergleichszahlen. `,
+        `So far, ${list} are calculated from individual issues; for the other ${missing} G20 countries the site shows comparison figures only. `),
+      L("Über Daten zu den fehlenden Ländern würde ich mich sehr freuen – am besten einzelne Emissionen oder Auktionen mit Datum, Volumen, Kurs, Kupon und Fälligkeit, oder Hinweise auf amtliche Quellen: ",
+        "I would be very glad to receive data on the missing countries – ideally individual issues or auctions with date, volume, price, coupon and maturity, or pointers to official sources: "),
+      h("a", { href: "mailto:Rentschler@lbsmail.de?subject=Zinslast-Jahrg%C3%A4nge%3A%20Daten" }, "Rentschler@lbsmail.de"), ".");
+  }
+
   async function viewYear(countries) {
     const country = countries.countries.find(c => c.code === state.country);
     const intl = await load("data/intl.json");
     CUR = country.currency;
-    const nodes = [h("h1", null, L(`Kreditjahrgang ${state.year} · ${countryName(country)}`, `Borrowing vintage ${state.year} · ${countryName(country)}`)), controls(countries)];
+    const nodes = [h("h1", null, L(`Kreditjahrgang ${state.year} · ${countryName(country)}`, `Borrowing vintage ${state.year} · ${countryName(country)}`)), pilotNote(countries), controls(countries)];
     if (country.vintage_data) {
       const cc = country.code.toLowerCase();
       const [summary, yearData, sources] = await Promise.all([
@@ -1043,6 +1058,7 @@
   // ------------------------------------------------------------------ Worum geht es? (einfach erklärt)
   async function viewExplainer() {
     CUR = "EUR";
+    const countriesAll = await load("data/countries.json");
     const years = [2026, 2027, 2028, 2029, 2030, 2031];
     const budget = [-18.7, 131.17, 108.32, 108.32, 108.32, 174.05];
     const vintage = [611.47, 0, 0, 0, 0, 0];
@@ -1050,6 +1066,7 @@
     const sec = (title, ...body) => h("section", { class: "card" }, h("h2", null, title), ...body);
     app.replaceChildren(h("div", { class: "doc" },
       h("h1", null, L("Worum geht es? Einfach erklärt", "What is this about? Explained simply")),
+      pilotNote(countriesAll),
       h("p", { class: "lead" }, L("Wenn ein Staat Geld leiht, zahlt er dafür Zinsen – oft viele Jahre lang. Diese Seite zeigt, in welchem Jahr diese Zinsen ", "When a state borrows money, it pays interest on it – often for many years. This site shows in which year this interest was "),
         h("em", null, L("versprochen", "promised")), L(" wurden. Nicht nur, wann sie ", ". Not just when it is "), h("em", null, L("bezahlt", "paid")), L(" werden.", ".")),
       sec(L("Ein Vergleich aus dem Alltag", "An everyday comparison"),

@@ -233,3 +233,4 @@ table.wrap-cells td.r, table.wrap-cells th.r { white-space: normal; }
 a.btn { display: inline-block; text-decoration: none; }
 .doc .card > h2 { border-top: none; margin-top: 0; padding-top: 0; }
 .note { overflow-wrap: anywhere; }
+.pilot { background: var(--surface-2); border: 1px solid var(--border); border-left: 4px solid var(--series-1); border-radius: 6px; padding: .6rem .85rem; margin: .25rem 0 1rem; font-size: .92rem; line-height: 1.5; overflow-wrap: anywhere; }
